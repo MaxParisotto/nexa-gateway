@@ -16,10 +16,11 @@ tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 config = "0.15.8"
 reqwest = { version = "0.12.12", features = ["json"] }
+common = { path = "../common" }
 
 [lib]
 path = "src/lib.rs"
 
 [[bin]]
-name = "nexa-gateway-api"
+name = "api"
 path = "src/main.rs"

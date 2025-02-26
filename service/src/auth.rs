@@ -1,27 +1,29 @@
 //! Authentication service implementation
 
-use crate::{Service, ServiceError};
-use anyhow::Result;
+use crate::{Service};
+// Removed unused import: ServiceError
+use common::errors::Result;
+use common::config::AuthConfig;
 use async_trait::async_trait;
-use nexa_gateway_common::config::AuthConfig;
 use sqlx::PgPool;
 use std::sync::Arc;
-use tracing::{info, error};
+use tracing::{info};
+// Removed unused import: error
 
 /// Service for authentication-related operations
 pub struct AuthService {
-    db: Arc<PgPool>,
-    config: Arc<AuthConfig>,
+    _db: Arc<PgPool>, // Prefixed with underscore to indicate intentionally unused
+    _config: Arc<AuthConfig>, // Prefixed with underscore to indicate intentionally unused
 }
 
 impl AuthService {
     /// Create a new authentication service
     pub fn new(db: Arc<PgPool>, config: Arc<AuthConfig>) -> Self {
-        Self { db, config }
+        Self { _db: db, _config: config }
     }
 
     /// Verify authentication credentials
-    pub async fn authenticate(&self, username: &str, password: &str) -> Result<String, ServiceError> {
+    pub async fn authenticate(&self, username: &str, _password: &str) -> Result<String> {
         info!("Authenticating user: {}", username);
         
         // Actual authentication would happen here
@@ -36,7 +38,7 @@ impl AuthService {
 
 #[async_trait]
 impl Service for AuthService {
-    async fn initialize(&self) -> Result<(), ServiceError> {
+    async fn initialize(&self) -> Result<()> {
         info!("Initializing authentication service");
         Ok(())
     }

@@ -1,9 +1,10 @@
-use axum::{
-    http::StatusCode,
-    response::{IntoResponse, Response},
-    Json,
-};
-use serde_json::json;
+// Commented out until axum dependency is properly configured
+// use axum::{
+//     http::StatusCode,
+//     response::{IntoResponse, Response},
+//     Json,
+// };
+// Removed unused import: serde_json::json
 use thiserror::Error;
 
 #[derive(Debug, Error)]
@@ -36,29 +37,30 @@ pub enum AppError {
     InvalidInput(String),
 }
 
-impl IntoResponse for AppError {
-    fn into_response(self) -> Response {
-        let (status, error_message) = match self {
-            Self::Auth(_) => (StatusCode::UNAUTHORIZED, self.to_string()),
-            Self::Authorization(_) => (StatusCode::FORBIDDEN, self.to_string()),
-            Self::Validation(_) => (StatusCode::BAD_REQUEST, self.to_string()),
-            Self::NotFound(_) => (StatusCode::NOT_FOUND, self.to_string()),
-            Self::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Database error occurred".into()),
-            Self::VectorDB(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Vector database error occurred".into()),
-            Self::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".into()),
-            Self::ExternalService(_) => (StatusCode::BAD_GATEWAY, "External service error".into()),
-            Self::InvalidInput(_) => (StatusCode::BAD_REQUEST, self.to_string()),
-        };
+// Commented out until axum dependency is properly configured
+// impl IntoResponse for AppError {
+//     fn into_response(self) -> Response {
+//         let (status, error_message) = match self {
+//             Self::Auth(_) => (StatusCode::UNAUTHORIZED, self.to_string()),
+//             Self::Authorization(_) => (StatusCode::FORBIDDEN, self.to_string()),
+//             Self::Validation(_) => (StatusCode::BAD_REQUEST, self.to_string()),
+//             Self::NotFound(_) => (StatusCode::NOT_FOUND, self.to_string()),
+//             Self::Database(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Database error occurred".into()),
+//             Self::VectorDB(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Vector database error occurred".into()),
+//             Self::Internal(_) => (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error".into()),
+//             Self::ExternalService(_) => (StatusCode::BAD_GATEWAY, "External service error".into()),
+//             Self::InvalidInput(_) => (StatusCode::BAD_REQUEST, self.to_string()),
+//         };
 
-        let body = Json(json!({
-            "error": {
-                "message": error_message,
-                "code": status.as_u16(),
-            }
-        }));
+//         let body = Json(json!({
+//             "error": {
+//                 "message": error_message,
+//                 "code": status.as_u16(),
+//             }
+//         }));
 
-        (status, body).into_response()
-    }
-}
+//         (status, body).into_response()
+//     }
+// }
 
 pub type Result<T> = std::result::Result<T, AppError>;

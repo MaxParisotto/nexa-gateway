@@ -47,33 +47,17 @@ pub fn init_logging(service_name: &str, default_level: &str) {
     );
 }
 
-pub fn setup_logging(config: &Settings) -> Result<(), String> {
-    let level = match config.logging.level.as_str() {
-        "trace" => Level::TRACE,
-        "debug" => Level::DEBUG,
-        "info" => Level::INFO,
-        "warn" => Level::WARN,
-        "error" => Level::ERROR,
-        _ => Level::INFO,
-    };
+pub fn setup_logging(_config: &Settings) -> Result<(), String> {
+    // Default to INFO level
+    let level = Level::INFO;
     
     let env_filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new(format!("{}", level)));
-
-    let is_json = config.logging.format == "json";
         
-    let fmt_layer = if is_json {
-        fmt::layer()
-            .with_target(true)
-            .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
-            .json()
-            .boxed()
-    } else {
-        fmt::layer()
-            .with_target(true)
-            .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
-            .boxed()
-    };
+    let fmt_layer = fmt::layer()
+        .with_target(true)
+        .with_span_events(FmtSpan::NEW | FmtSpan::CLOSE)
+        .boxed();
         
     tracing_subscriber::registry()
         .with(env_filter)

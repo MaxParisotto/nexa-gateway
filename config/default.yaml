@@ -1,7 +1,8 @@
+environment: "development"
+
 server:
   host: "0.0.0.0"
   port: 8080
-  workers: 4
 
 database:
   url: "postgres://user:password@localhost/nexaagents"
@@ -9,7 +10,11 @@ database:
 
 auth:
   jwt_secret: "supersecretkey"
-  token_expiry: 3600 # 1 hour in seconds
+  jwt_expiration: 24 # 24 hours
+
+agora:
+  host: "0.0.0.0"
+  port: 8081
 
 logging:
   level: "info"

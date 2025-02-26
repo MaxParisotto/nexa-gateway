@@ -4,10 +4,14 @@ pub mod error;
 pub mod routes;
 pub mod middleware;
 pub mod state;
+pub mod handlers;
+pub mod services;
 
-use hyper::Server;
+// Remove hyper::Server import as it's not needed
+// use hyper::Server;
 
-pub use error::GatewayError;
+// Import the error type from the error module
+pub use error::AppError as GatewayError;
 
 use axum::Router;
 use std::net::SocketAddr;
@@ -25,7 +29,7 @@ pub async fn start_server(settings: &common::config::Settings) {
     let _enter = span.enter();
     
     // Initialize logging from common crate
-    common::logging::init_logging(settings);
+    common::logging::init_logging("gateway", "info");
     tracing::info!("Initializing gateway server");
     
     let app = Router::new()
@@ -34,8 +38,11 @@ pub async fn start_server(settings: &common::config::Settings) {
     let addr = SocketAddr::from(([0, 0, 0, 0], settings.server.port));
     tracing::info!(%addr, "Binding server to address");
     
-    axum::Server::bind(&addr)
-        .serve(app.into_make_service())
+    let listener = tokio::net::TcpListener::bind(&addr)
+        .await
+        .unwrap();
+        
+    axum::serve(listener, app)
         .await
         .unwrap();
     

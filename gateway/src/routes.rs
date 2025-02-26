@@ -30,7 +30,7 @@ pub struct CreateAgentRequest {
 }
 
 // List all agents
-pub async fn list_agents(State(state): State<AppState>) -> Json<Vec<Agent>> {
+pub async fn list_agents(State(_state): State<AppState>) -> Json<Vec<Agent>> {
     info!("Listing all agents");
     // This would integrate with vectordb in a real implementation
     Json(vec![
@@ -44,7 +44,7 @@ pub async fn list_agents(State(state): State<AppState>) -> Json<Vec<Agent>> {
 
 // Get agent by ID
 pub async fn get_agent(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Path(id): Path<String>,
 ) -> Json<Agent> {
     info!("Getting agent with ID: {}", id);
@@ -58,7 +58,7 @@ pub async fn get_agent(
 
 // Create a new agent
 pub async fn create_agent(
-    State(state): State<AppState>,
+    State(_state): State<AppState>,
     Json(payload): Json<CreateAgentRequest>,
 ) -> Json<Agent> {
     info!("Creating new agent: {}", payload.name);

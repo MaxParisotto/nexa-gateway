@@ -2,28 +2,6 @@
 
 use std::fmt;
 
-/// Result type used throughout the Nexa Gateway codebase
-pub type Result<T> = std::result::Result<T, Error>;
-
-/// Common error type for the Nexa Gateway
-#[derive(Debug, thiserror::Error)]
-pub enum Error {
-    #[error("Internal server error: {0}")]
-    Internal(String),
-    
-    #[error("Not found: {0}")]
-    NotFound(String),
-    
-    #[error("Bad request: {0}")]
-    BadRequest(String),
-    
-    #[error("Unauthorized: {0}")]
-    Unauthorized(String),
-    
-    #[error(transparent)]
-    Other(#[from] anyhow::Error),
-}
-
 /// Version information for the Nexa Gateway
 pub struct Version {
     pub major: u8,
@@ -59,7 +37,13 @@ mod tests {
 
 pub mod config;
 pub mod error;
+pub mod errors;
+pub mod database;
+pub mod logging;
+pub mod middleware;
+pub mod models;
 
 // Re-export commonly used items
 pub use config::Settings;
 pub use error::CommonError;
+pub use errors::{AppError, Result};

@@ -1,8 +1,8 @@
 //! Service layer for Nexa Gateway
 
-use common::Result;
+use common::errors::Result;
 use async_trait::async_trait;
-use tracing::info;
+// Removed unused import: tracing::info
 
 mod user;
 mod auth;
@@ -16,7 +16,7 @@ pub use error::ServiceError;
 #[async_trait]
 pub trait Service: Send + Sync + 'static {
     /// Initialize the service with any required dependencies
-    async fn initialize(&self) -> Result<(), ServiceError>;
+    async fn initialize(&self) -> Result<()>;
 }
 
 // Export service implementations

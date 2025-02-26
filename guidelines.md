@@ -1,5 +1,7 @@
 # Workspace & Crate Structure
 
+always use the latest version of the dependencies or the latest possible combination
+
 Initialize a Rust workspace with clearly defined crates:
 
 gateway: The main RESTful API server built using Axum.
@@ -55,3 +57,5 @@ Project structure.
 How to build, test, and run the crates locally.
 
 How to integrate and scale in a production environment.
+
+Worklog: Always use a day:hour:minute when adding a note

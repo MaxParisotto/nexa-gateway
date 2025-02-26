@@ -55,6 +55,8 @@ pub struct WebSocketConfig {
 /// Global application settings.
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Settings {
+    pub environment: String,
+    pub auth: AuthConfig,
     pub server: ServerSettings,
     pub database: DatabaseSettings,
     pub agora: AgoraSettings,
@@ -93,7 +95,7 @@ impl Settings {
 
         let settings = Config::builder()
             // Start with default configuration
-            .add_source(File::with_name("config/default"))
+            .add_source(File::with_name(config_path.to_str().unwrap_or("config/default")))
             // Add environment-specific configuration
             .add_source(
                 File::with_name(&format!(
@@ -112,13 +114,12 @@ impl Settings {
     }
 }
 
-pub fn load_config() -> Result<Config> {
+pub fn load_config() -> std::result::Result<Config, ConfigError> {
     // Use real production environment or config file
     let config = Config::builder()
         .add_source(config::Environment::default())
         .add_source(config::File::with_name("config/production"))
-        .build()?
-        .try_deserialize()?;
+        .build()?;
     
     Ok(config)
 }
@@ -133,33 +134,31 @@ mod tests {
     #[test]
     fn test_load_config() {
         let dir = tempdir().unwrap();
-        let config_path = dir.path().join("default.yaml");
+        let config_dir = dir.path().join("config");
+        fs::create_dir_all(&config_dir).unwrap();
+        
+        let config_path = config_dir.join("default.yaml");
 
         let config_content = r#"
-            environment: production
-            auth:
-                jwt_secret: test_secret
-                jwt_expiration: 24
-            database:
-                url: postgres://user:pass@localhost/testdb
-                max_connections: 10
-            vectordb:
-                url: http://localhost:6333
-                api_key: null
-            server:
-                host: 0.0.0.0
-                port: 8080
-            websocket:
-                host: 0.0.0.0
-                port: 8081
-                max_message_size: 1048576
+environment: production
+auth:
+    jwt_secret: test_secret
+    jwt_expiration: 24
+server:
+    host: 0.0.0.0
+    port: 8080
+database:
+    url: postgres://user:pass@localhost/testdb
+    max_connections: 10
+agora:
+    host: 0.0.0.0
+    port: 8081
         "#;
 
         let mut file = fs::File::create(&config_path).unwrap();
         file.write_all(config_content.as_bytes()).unwrap();
 
-        std::env::set_var("CONFIG_PATH", config_path.to_str().unwrap());
-        let settings = Settings::new(&dir.path().join("default")).unwrap();
+        let settings = Settings::new(config_dir.join("default")).unwrap();
 
         assert_eq!(settings.environment, "production");
         assert_eq!(settings.auth.jwt_secret, "test_secret");
