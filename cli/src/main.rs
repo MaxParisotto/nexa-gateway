@@ -8,6 +8,9 @@ use colored::*;
 use console::Term;
 use std::path::PathBuf;
 
+mod dashboard; // Make sure to include the dashboard module
+mod status;
+
 // Make sure the source directory exists
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -33,10 +36,14 @@ async fn main() -> Result<()> {
                 DashboardCmd::List => {
                     list_dashboards().await?;
                 },
+                DashboardCmd::Monitor { duration } => {
+                    // New command to show real-time dashboard
+                    dashboard::display_metrics_for_duration(duration).await?;
+                },
             }
         },
         None => {
-            // No command specified, show interactive menu
+            // No command specified, show interactive menu with metrics
             show_interactive_menu().await?;
         },
     }
@@ -88,6 +95,13 @@ enum DashboardCmd {
     
     /// List saved dashboards
     List,
+    
+    /// Monitor system metrics in real-time
+    Monitor {
+        /// Duration in seconds to monitor (default: run until Ctrl+C)
+        #[clap(short, long, default_value = "3600")]
+        duration: u64,
+    },
 }
 
 /// Display system status
@@ -170,46 +184,61 @@ async fn list_dashboards() -> Result<()> {
     Ok(())
 }
 
-/// Show the interactive CLI menu
+/// Show the interactive CLI menu with real-time metrics
 async fn show_interactive_menu() -> Result<()> {
     let term = Term::stdout();
-    term.clear_screen()?;
     
-    println!("╔══════════════════════════════════╗");
-    println!("║      NEXA AI ORCHESTRATION       ║");
-    println!("╚══════════════════════════════════╝");
-    println!();
+    // Initialize the dashboard
+    let mut metrics = dashboard::init_dashboard().await?;
     
-    let selections = &[
-        "System Status",
-        "Manage AI Agents",
-        "Agent Orchestration",
-        "View Execution Logs",
-        "Configure Platform",
-        "Dashboard Management",
-        "Backup/Restore",
-        "Exit",
-    ];
+    // Start a background task to update metrics
+    let _metrics_handle = metrics.start_background_updater().await;
     
-    let selection = dialoguer::Select::with_theme(&dialoguer::theme::ColorfulTheme::default())
-        .items(selections)
-        .default(0)
-        .interact_on(&term)?;
-    
-    match selection {
-        0 => {
-            display_status().await?;
-            wait_for_key_press()?;
-            Box::pin(show_interactive_menu()).await?;
-        },
-        7 => {
-            println!("Exiting Nexa Gateway...");
-        },
-        _ => {
-            println!("Feature not yet implemented.");
-            wait_for_key_press()?;
-            Box::pin(show_interactive_menu()).await?;
-        },
+    loop {
+        term.clear_screen()?;
+        
+        // Display title
+        println!("╔══════════════════════════════════╗");
+        println!("║      NEXA AI ORCHESTRATION       ║");
+        println!("╚══════════════════════════════════╝");
+        
+        // Display real-time metrics dashboard
+        metrics.update().await?;
+        metrics.display();
+        
+        println!(); // Add some space between dashboard and menu
+        
+        // Display menu options
+        let selections = &[
+            "System Status",
+            "Manage AI Agents",
+            "Agent Orchestration",
+            "View Execution Logs",
+            "Configure Platform",
+            "Dashboard Management",
+            "Backup/Restore",
+            "Exit",
+        ];
+        
+        let selection = dialoguer::Select::with_theme(&dialoguer::theme::ColorfulTheme::default())
+            .items(selections)
+            .default(0)
+            .interact_on(&term)?;
+        
+        match selection {
+            0 => {
+                display_status().await?;
+                wait_for_key_press()?;
+            },
+            7 => {
+                println!("Exiting Nexa Gateway...");
+                break;
+            },
+            _ => {
+                println!("Feature not yet implemented.");
+                wait_for_key_press()?;
+            },
+        }
     }
     
     Ok(())
