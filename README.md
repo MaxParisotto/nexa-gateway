@@ -16,7 +16,6 @@ Nexa Gateway is a comprehensive backend system that provides:
 
 The project is organized as a Rust workspace with multiple crates:
 
-```
 nexa-gateway/
 ├── gateway/       # Main API server using Axum
 ├── api/           # Secondary API server
@@ -27,7 +26,7 @@ nexa-gateway/
 ├── common/        # Shared utilities, models, and middleware
 ├── core/          # Core functionality and abstractions
 └── config/        # Configuration files
-```
+
 
 ### Crate Details
 

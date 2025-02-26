@@ -1,7 +1,7 @@
 //! Nexa Gateway - Main API server
 
 use axum::{
-    routing::{get},
+    routing::get,
     // Removed unused import: post
     Router,
     // Removed unused import: extract::State
@@ -12,7 +12,7 @@ use common::{
     // Removed unused import: logging
 };
 use std::{net::SocketAddr, sync::Arc};
-use tracing::{info};
+use tracing::info;
 // Removed unused import: error
 use tower_http::{
     trace::TraceLayer,

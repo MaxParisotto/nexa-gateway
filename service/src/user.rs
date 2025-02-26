@@ -1,12 +1,12 @@
 //! User management service implementation
 
-use crate::{Service};
+use crate::Service;
 // Removed unused import: ServiceError
 use common::errors::Result;
 use async_trait::async_trait;
 use sqlx::PgPool;
 use std::sync::Arc;
-use tracing::{info};
+use tracing::info;
 // Removed unused import: error
 
 // Placeholder for User model until core is properly integrated

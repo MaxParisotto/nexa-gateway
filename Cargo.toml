@@ -7,8 +7,13 @@ members = [
     "agora",
     "vectordb",
     "auth",
-    "common"
+    "common",
+    "dashboard",
+    "nexa"
 ]
+
+# Set the default member to run with cargo run
+default-members = ["nexa"]
 resolver = "2" # Modern dependency resolver for better compatibility
 
 # Define shared dependencies at the workspace level

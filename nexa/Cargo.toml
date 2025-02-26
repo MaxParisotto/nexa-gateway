@@ -1,0 +1,25 @@
+[package]
+name = "nexa"
+version = "0.1.0"
+edition = "2021"
+description = "Main entry point for Nexa Gateway with UI"
+authors = ["Nexa Team"]
+license = "MIT"
+
+[dependencies]
+# Internal crates
+gateway = { path = "../gateway" }
+dashboard = { path = "../dashboard" }
+common = { path = "../common" }
+
+# Core dependencies from workspace
+tokio.workspace = true
+anyhow.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# Web server and networking
+axum = { workspace = true }  # Use the workspace version (0.8.1)
+
+# For running multiple services
+futures = { workspace = true }

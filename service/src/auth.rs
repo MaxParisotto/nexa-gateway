@@ -1,13 +1,13 @@
 //! Authentication service implementation
 
-use crate::{Service};
+use crate::Service;
 // Removed unused import: ServiceError
 use common::errors::Result;
 use common::config::AuthConfig;
 use async_trait::async_trait;
 use sqlx::PgPool;
 use std::sync::Arc;
-use tracing::{info};
+use tracing::info;
 // Removed unused import: error
 
 /// Service for authentication-related operations
