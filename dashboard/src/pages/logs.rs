@@ -1,90 +1,126 @@
 //! Logs page for the dashboard
-//! 
-//! This page displays system logs and events.
+//!
+//! This page displays logs from the gateway.
 
 use leptos::*;
-use crate::components::{Header, Sidebar, Card};
+use wasm_bindgen::prelude::*;
+use leptos::prelude::*;
+use leptos::html::ElementChild;  // Add ElementChild trait
+
+/// Log entry data structure
+#[derive(Clone)]
+struct LogEntry {
+    timestamp: String,
+    level: String,
+    message: String,
+}
+
+/// Log level enum
+#[derive(Clone, PartialEq)]
+enum LogLevel {
+    All,
+    Error,
+    Warning,
+    Info,
+    Debug,
+}
+
+// Quick helper function for logging to console
+fn log_to_console(msg: &str) {
+    #[wasm_bindgen]
+    extern "C" {
+        #[wasm_bindgen(js_namespace = console)]
+        fn log(s: &str);
+    }
+    log(msg);
+}
 
 /// Logs page component
 #[component]
 pub fn LogsPage() -> impl IntoView {
-    // Sample log entries
-    let log_entries = vec![
-        ("2025-02-26 11:30:12", "INFO", "Gateway started successfully"),
-        ("2025-02-26 11:30:15", "INFO", "Connected to database"),
-        ("2025-02-26 11:32:45", "INFO", "User admin logged in"),
-        ("2025-02-26 11:35:22", "WARN", "High CPU usage detected (78%)"),
-        ("2025-02-26 11:38:17", "INFO", "Cache cleared"),
-        ("2025-02-26 11:40:03", "ERROR", "Failed to connect to external API: timeout"),
-        ("2025-02-26 11:42:51", "INFO", "Scheduled maintenance started"),
-        ("2025-02-26 11:43:12", "INFO", "Configuration updated"),
+    // In a real application, we would fetch logs from an API
+    // For now, we'll use static data
+    let logs = vec![
+        LogEntry {
+            timestamp: "2025-02-26 13:11:19".to_string(),
+            level: "INFO".to_string(),
+            message: "Starting Nexa Gateway with UI".to_string(),
+        },
+        LogEntry {
+            timestamp: "2025-02-26 13:11:19".to_string(),
+            level: "INFO".to_string(),
+            message: "Starting API server on port 3000".to_string(),
+        },
+        LogEntry {
+            timestamp: "2025-02-26 13:11:19".to_string(),
+            level: "INFO".to_string(),
+            message: "Starting dashboard UI on port 3001".to_string(),
+        },
+        LogEntry {
+            timestamp: "2025-02-26 13:11:19".to_string(),
+            level: "INFO".to_string(),
+            message: "Creating gateway application".to_string(),
+        },
+        LogEntry {
+            timestamp: "2025-02-26 13:11:19".to_string(),
+            level: "INFO".to_string(),
+            message: "API server listening on 0.0.0.0:3000".to_string(),
+        },
+        LogEntry {
+            timestamp: "2025-02-26 13:11:19".to_string(),
+            level: "INFO".to_string(),
+            message: "Dashboard UI listening on 0.0.0.0:3001".to_string(),
+        },
     ];
     
+    // Reactive signal for selected log level
+    let (selected_level, set_selected_level) = signal(LogLevel::All);
+    
+    // Function to download logs
+    let download_logs = move |_| {
+        // In a real application, this would trigger a download
+        // For now, we'll just log to the console
+        log_to_console("Downloading logs...");
+    };
+    
+    // Handler for level selection changes
+    let handle_level_change = move |ev| {
+        match event_target_value(&ev).as_str() {
+            "Error" => set_selected_level.set(LogLevel::Error),
+            "Warning" => set_selected_level.set(LogLevel::Warning),
+            "Info" => set_selected_level.set(LogLevel::Info),
+            "Debug" => set_selected_level.set(LogLevel::Debug),
+            _ => set_selected_level.set(LogLevel::All),
+        }
+    };
+    
     view! {
-        <div class="dashboard-container">
-            <Header title="Nexa Gateway Dashboard" />
-            <div class="dashboard-content">
-                <Sidebar active_page="logs" />
-                <main class="main-content">
-                    <h1>"System Logs"</h1>
-                    
-                    <div class="logs-filter">
-                        <div class="filter-group">
-                            <label for="log-level-filter">"Log Level:"</label>
-                            <select id="log-level-filter">
-                                <option selected="true">"All"</option>
-                                <option>"Info"</option>
-                                <option>"Warning"</option>
-                                <option>"Error"</option>
-                                <option>"Debug"</option>
-                            </select>
+        <div class="page">
+            <h1>"Gateway Logs"</h1>
+            
+            <div class="log-controls">
+                <select on:change=handle_level_change>
+                    <option selected=move || selected_level.get() == LogLevel::All>"All Levels"</option>
+                    <option selected=move || selected_level.get() == LogLevel::Error>"Error"</option>
+                    <option selected=move || selected_level.get() == LogLevel::Warning>"Warning"</option>
+                    <option selected=move || selected_level.get() == LogLevel::Info>"Info"</option>
+                    <option selected=move || selected_level.get() == LogLevel::Debug>"Debug"</option>
+                </select>
+                
+                <button>"Refresh"</button>
+                <button on:click=download_logs>"Download Logs"</button>
+            </div>
+            
+            <div class="logs-container">
+                {logs.into_iter().map(|log| {
+                    view! {
+                        <div class=format!("log-entry {}", log.level.clone().to_lowercase())>  // Clone here
+                            <span class="log-timestamp">{log.timestamp}</span>
+                            <span class=format!("log-level {}", log.level.clone().to_lowercase())>{log.level.clone()}</span>  // Clone here and here
+                            <span class="log-message">{log.message}</span>
                         </div>
-                        
-                        <div class="filter-group">
-                            <label for="log-search">"Search:"</label>
-                            <input type="text" id="log-search" placeholder="Filter logs..." />
-                        </div>
-                    </div>
-                    
-                    <Card title="Recent Logs">
-                        <div class="logs-table-container">
-                            <table class="logs-table">
-                                <thead>
-                                    <tr>
-                                        <th>"Timestamp"</th>
-                                        <th>"Level"</th>
-                                        <th>"Message"</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {log_entries.into_iter().map(|(timestamp, level, message)| {
-                                        let level_class = match level {
-                                            "ERROR" => "log-level-error",
-                                            "WARN" => "log-level-warn",
-                                            "INFO" => "log-level-info",
-                                            "DEBUG" => "log-level-debug",
-                                            _ => "",
-                                        };
-                                        
-                                        view! {
-                                            <tr>
-                                                <td class="log-timestamp">{timestamp}</td>
-                                                <td class={format!("log-level {}", level_class)}>{level}</td>
-                                                <td class="log-message">{message}</td>
-                                            </tr>
-                                        }
-                                    }).collect::<Vec<_>>()}
-                                </tbody>
-                            </table>
-                        </div>
-                    </Card>
-                    
-                    <div class="logs-actions">
-                        <button class="action-button">"Refresh"</button>
-                        <button class="action-button">"Export Logs"</button>
-                        <button class="action-button">"Clear Logs"</button>
-                    </div>
-                </main>
+                    }
+                }).collect::<Vec<_>>()}
             </div>
         </div>
     }

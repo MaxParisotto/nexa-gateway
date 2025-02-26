@@ -3,6 +3,7 @@
 //! This module provides functions for fetching and updating gateway settings.
 
 use leptos::*;
+use crate::server_fn::ServerFnError;
 use serde::{Deserialize, Serialize};
 
 /// Gateway settings
@@ -61,7 +62,7 @@ pub async fn get_settings() -> Result<GatewaySettings, ServerFnError> {
 
 /// Update gateway settings
 #[server]
-pub async fn update_settings(settings: GatewaySettings) -> Result<bool, ServerFnError> {
+pub async fn update_settings(_settings: GatewaySettings) -> Result<bool, ServerFnError> {
     // In a real application, this would update the gateway settings via API
     // For now, we'll just return success
     Ok(true)

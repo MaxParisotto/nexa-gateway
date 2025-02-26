@@ -1,8 +1,6 @@
-//! API integration for the dashboard
-//! 
-//! This module contains functions for interacting with the backend API.
+//! API client for the dashboard
+//!
+//! This module provides client functions to interact with the gateway API.
 
-pub mod status;
 pub mod metrics;
 pub mod settings;
-pub mod logs;

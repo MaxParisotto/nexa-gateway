@@ -2,7 +2,7 @@ use axum::{
     routing::get,
     Router,
     extract::Extension,
-    http::{Request, Response, StatusCode, Uri},
+    http::{Request, Response, StatusCode},
 };
 use dashboard::{Dashboard, register_server_functions};
 use leptos::*;
@@ -33,7 +33,7 @@ async fn main() {
         .layer(Extension(Arc::new(app_state)));
     
     // Start the server
-    let addr = SocketAddr::from(([127, 0, 0, 1], 3001));
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
     info!("Dashboard server listening on {}", addr);
     
     let listener = tokio::net::TcpListener::bind(&addr)
@@ -49,18 +49,19 @@ struct AppState {
     leptos_options: LeptosOptions,
 }
 
-/// Handler for Leptos routes
 async fn leptos_handler(
     Extension(state): Extension<Arc<AppState>>,
     req: Request<axum::body::Body>,
 ) -> Response<axum::body::Body> {
-    // Render the app to HTML
-    let html = leptos::ssr::render_to_string(|| view! { <Dashboard/> });
+    // Render the app to HTML using leptos options from state
+    let html = leptos_axum::render_app_to_string(
+        state.leptos_options.clone(),
+        || view! { <Dashboard/> },
+    );
     
-    // Return the HTML response
     Response::builder()
         .status(StatusCode::OK)
         .header("Content-Type", "text/html")
-        .body(axum::body::Body::from(html.to_string()))
+        .body(axum::body::Body::from(html))
         .unwrap()
 }

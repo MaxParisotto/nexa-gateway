@@ -3,6 +3,7 @@
 //! This module provides functions for fetching metrics data.
 
 use leptos::*;
+use crate::server_fn::ServerFnError;
 use serde::{Deserialize, Serialize};
 
 /// Time series data point
@@ -22,7 +23,7 @@ pub struct MetricsData {
 
 /// Get metrics data for a specific metric
 #[server]
-pub async fn get_metrics(metric_name: String, time_range: String) -> Result<MetricsData, ServerFnError> {
+pub async fn get_metrics(metric_name: String, _time_range: String) -> Result<MetricsData, ServerFnError> {
     // In a real application, this would fetch data from the gateway API
     // For now, we'll return mock data
     

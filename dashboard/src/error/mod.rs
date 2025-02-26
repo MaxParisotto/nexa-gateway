@@ -6,13 +6,18 @@ use thiserror::Error;
 
 /// Dashboard-specific errors
 #[derive(Debug, Error)]
+#[allow(dead_code)]
 pub enum DashboardError {
-    /// API request error
-    #[error("API request failed: {0}")]
+    /// API error
+    #[error("API error: {0}")]
     ApiError(String),
     
+    /// Not found error
+    #[error("Not found: {0}")]
+    NotFoundError(String),
+    
     /// Authentication error
-    #[error("Authentication failed: {0}")]
+    #[error("Authentication error: {0}")]
     AuthError(String),
     
     /// Internal server error
@@ -20,5 +25,9 @@ pub enum DashboardError {
     InternalError(String),
 }
 
+// Remove the conflicting Display implementation since it's already derived via thiserror::Error
+// impl fmt::Display for DashboardError {...}
+
 /// Result type for dashboard operations
+#[allow(dead_code)]
 pub type Result<T> = std::result::Result<T, DashboardError>;

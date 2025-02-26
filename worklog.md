@@ -114,3 +114,18 @@
   - Changed `/api/agents/:id` to `/api/agents/{id}` in gateway/src/lib.rs
   - Updated both nexa and dashboard crates to use the workspace version of axum (0.8.1)
   - Fixed the init_logging function call in dashboard/src/main.rs to provide both required parameters
+
+## 2025-02-26 13:06
+
+- Fixed UI accessibility issue:
+  - Changed the dashboard server binding from 127.0.0.1 (localhost) to 0.0.0.0 (all interfaces) in dashboard/src/main.rs
+  - Updated the corresponding address in nexa/src/main.rs for consistency
+  - This allows the dashboard UI to be accessed from external machines, not just the local machine
+
+## 2025-02-26 13:10
+
+- Fixed missing static files for the dashboard UI:
+  - Created the missing pkg directory in dashboard/site
+  - Added dashboard.css and dashboard.js files to the pkg directory
+  - These files are required by the index.html file for proper rendering
+  - The dashboard UI now has the necessary static files to display correctly

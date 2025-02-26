@@ -9,6 +9,7 @@ use std::net::SocketAddr;
 use tokio::task::JoinHandle;
 use tracing::{info, error};
 use tracing_subscriber::{FmtSubscriber, EnvFilter};
+use gateway::create_app;
 
 /// Main entry point
 #[tokio::main]
@@ -67,25 +68,25 @@ fn start_api_server() -> JoinHandle<Result<()>> {
         Ok(())
     })
 }
+
 fn start_dashboard_ui() -> JoinHandle<Result<()>> {
     tokio::spawn(async move {
         // Create the dashboard app
-        let app = match dashboard::create_app() {
+        let app = match create_app() {
             Ok(app) => app,
             Err(e) => {
-                error!("Failed to create dashboard app: {}", e);
                 return Err(anyhow::anyhow!("Failed to create dashboard app: {}", e));
             }
         };
         
         // Start the server
-        let addr = SocketAddr::from(([127, 0, 0, 1], 3001));
+        let addr = SocketAddr::from(([0, 0, 0, 0], 3001));
         info!("Dashboard UI listening on {}", addr);
         
         let listener = tokio::net::TcpListener::bind(&addr).await?;
         axum::serve(listener, app.into_make_service())
             .await?;
-        
+            
         Ok(())
     })
 }

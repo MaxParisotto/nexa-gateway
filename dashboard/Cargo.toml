@@ -20,18 +20,18 @@ serde_json.workspace = true
 tracing.workspace = true
 
 # Leptos dependencies
-leptos = { version = "0.5.4", features = ["csr", "ssr"] }
-leptos_meta = { version = "0.5.4" }
-leptos_router = { version = "0.5.4" }
-leptos_axum = { version = "0.5.4" }
-console_error_panic_hook = "0.1"
-wasm-bindgen = "0.2"
-js-sys = "0.3"
+leptos = { version = "0.7.7", features = ["csr", "ssr"] }
+leptos_meta = { version = "0.7.7" }
+leptos_router = { version = "0.7.7", features = ["ssr"] }
+leptos_axum = { version = "0.7.7" }
+console_error_panic_hook = "0.1.7"
+wasm-bindgen = "0.2.100"
+js-sys = "0.3.77"
 
 # Web server integration
 axum = { workspace = true }  # Use the workspace version (0.8.1)
 tower = { workspace = true }  # Use the workspace version
-tower-http = { workspace = true }  # Use the workspace version
+tower-http = { version = "0.6", features = ["fs", "trace"] }  # Use the workspace version
 
 # For server-side rendering
 cfg-if = "1.0"

@@ -2,14 +2,13 @@
 //! 
 //! This module contains reusable UI components for the dashboard.
 
-mod header;
-mod sidebar;
-mod card;
-mod status_indicator;
-mod metrics_chart;
+pub mod metrics_chart;  // Make this public
 
-pub use header::Header;
-pub use sidebar::Sidebar;
-pub use card::Card;
-pub use status_indicator::StatusIndicator;
+// We don't have these components yet, but export them when they're ready
+// pub mod header;
+// pub mod sidebar;
+// pub mod card;
+// pub mod status_indicator;
+
+// Export the MetricsChart component so it can be used directly
 pub use metrics_chart::MetricsChart;
