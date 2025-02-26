@@ -1,0 +1,37 @@
+[package]
+name = "gateway"
+version = "0.1.0"
+edition = "2021"
+description = "Main API server for Nexa Gateway"
+authors = ["Nexa Team"]
+license = "MIT"
+
+[dependencies]
+# Internal crates
+common = { path = "../common" }
+auth = { path = "../auth" }
+vectordb = { path = "../vectordb", optional = true }
+agora = { path = "../agora", optional = true }
+
+# Core dependencies from workspace
+tokio.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+config.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+# Web server and networking
+axum.workspace = true
+hyper = { workspace = true }
+tower = { workspace = true }
+tower-http.workspace = true
+
+# Database
+sqlx = { workspace = true, features = ["postgres", "runtime-tokio-rustls", "macros"] }
+
+[dev-dependencies]
+tokio = { version = "1.43.0", features = ["full"] }
+reqwest = "0.12.12"

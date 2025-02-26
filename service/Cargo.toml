@@ -1,0 +1,28 @@
+[package]
+name = "service"
+version = "0.1.0"
+edition = "2021"
+description = "Business logic services for the Nexa Gateway"
+authors = ["Nexa Team"]
+
+[dependencies]
+# Core dependencies from workspace
+tokio = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Internal crate dependencies
+common = { path = "../common" }
+core = { path = "../core", optional = true }
+
+# Date and time
+chrono = { workspace = true }
+
+# Database interactions
+sqlx = { workspace = true, features = ["postgres", "runtime-tokio-rustls", "macros", "uuid", "json", "chrono"] }
+
+# Tracing
+tracing = { workspace = true }

@@ -1,0 +1,20 @@
+[package]
+name = "core"
+version = "0.1.0"
+edition = "2021"
+description = "Core functionality for the Nexa Gateway"
+authors = ["Nexa Team"]
+license = "MIT"
+
+[dependencies]
+# Core dependencies from workspace
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+
+# Internal dependencies
+common = { path = "../common" }

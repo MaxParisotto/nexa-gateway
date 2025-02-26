@@ -1,0 +1,70 @@
+[workspace]
+members = [
+    "core",
+    "api",
+    "service", 
+    "gateway",
+    "agora",
+    "vectordb",
+    "auth",
+    "common"
+]
+resolver = "2" # Modern dependency resolver for better compatibility
+
+# Define shared dependencies at the workspace level
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+
+# Networking
+hyper = { version = "1.6.0", features = ["full"] }
+reqwest = { version = "0.12.12", features = ["json"] }
+axum = "0.8.1"
+tower = "0.5.2"
+tower-http = { version = "0.6.2", features = ["cors", "trace"] }
+tokio-tungstenite = "0.26.2"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Logging and error handling
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "2.0.11"
+anyhow = "1.0"
+
+# Database
+sqlx = { version = "0.8.3", features = ["runtime-tokio", "tls-rustls"] }
+
+# Date and time
+chrono = { version = "0.4.40", features = ["serde"] }
+
+# Configuration
+config = "0.15.8"
+dotenv = "0.15"
+
+# Authentication
+argon2 = "0.5.2"
+jsonwebtoken = "9.3.1"
+
+# Other common dependencies as needed
+qdrant-client = "1.13.0"
+futures = "0.3"
+uuid = { version = "1.15.0", features = ["v4", "serde"] }
+
+# Allow subcrates to inherit workspace dependency versions
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.72"
+authors = ["Nexa Team"]
+
+# Note: Individual crates can inherit these versions using:
+# dependencies.tokio = { workspace = true }
+
+# Production-only features
+[workspace.features]
+default = ["production"]
+production = []
