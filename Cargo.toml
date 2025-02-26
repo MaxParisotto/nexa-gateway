@@ -1,19 +1,15 @@
 [workspace]
 members = [
-    "core",
-    "api",
-    "service", 
-    "gateway",
+    "core",    # Was previously "gateway"
+    "cli",     # Now at the root level
     "agora",
     "vectordb",
     "auth",
-    "common",
-    "dashboard",
-    "nexa"
+    "common"
 ]
 
 # Set the default member to run with cargo run
-default-members = ["nexa"]
+default-members = ["cli"]
 resolver = "2" # Modern dependency resolver for better compatibility
 
 # Define shared dependencies at the workspace level
@@ -68,8 +64,3 @@ authors = ["Nexa Team"]
 
 # Note: Individual crates can inherit these versions using:
 # dependencies.tokio = { workspace = true }
-
-# Production-only features
-[workspace.features]
-default = ["production"]
-production = []

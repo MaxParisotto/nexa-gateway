@@ -14,6 +14,8 @@ auth: Handles authentication (JWT-based) and permissions with advanced security 
 
 common: Shared models, types, configuration handling, logging, and authentication middleware.
 
+cli: A command-line interface for managing the system and providing dashboard persistence.
+
 Use Tokio for asynchronous programming and concurrency.
 
 Add structured error handling throughout the crates with thiserror or anyhow.

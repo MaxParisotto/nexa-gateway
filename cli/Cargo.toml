@@ -1,0 +1,35 @@
+[package]
+name = "cli"
+version = "0.1.0"
+edition = "2021"
+description = "Command Line Interface for Nexa Gateway"
+authors = ["Nexa Team"]
+
+[dependencies]
+# Internal crates - update gateway to core
+core = { path = "../core" }
+common = { path = "../common" }
+auth = { path = "../auth" }
+
+# CLI dependencies
+clap = { version = "4.5.31", features = ["derive"] }
+dialoguer = "0.11.0"
+console = "0.15.10"
+colored = "2.0"
+prettytable-rs = "0.10"
+indicatif = "0.17.11"
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true, features = ["full"] }
+
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+
+# Logging
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

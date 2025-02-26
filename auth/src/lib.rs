@@ -1,190 +1,51 @@
-//! Authentication module for the Nexa gateway.
-//! Provides JWT token generation, password hashing, and authorization functionalities.
+//! Authentication crate for Nexa Gateway
+//!
+//! This crate handles authentication (JWT-based) and permissions.
 
-// Removed unused import: argon2
-use async_trait::async_trait;
-use chrono::{Duration, Utc};
-use jsonwebtoken::{decode, encode, Algorithm, DecodingKey, EncodingKey, Header, Validation};
-// Removed unused import: rand::rngs::OsRng
-use serde::{Deserialize, Serialize};
-use thiserror::Error;
+pub mod jwt;
+pub mod permissions;
+pub mod middleware;
+pub mod error;
 
-use common::config::Settings;
+pub use error::AuthError;
 
-/// Authentication-related errors.
-#[derive(Debug, Error, Serialize, Deserialize)]
-pub enum AuthError {
-    /// Returned when user credentials are invalid.
-    #[error("Invalid credentials")]
-    InvalidCredentials,
-    
-    /// Returned when the provided token is invalid.
-    #[error("Invalid token")]
-    InvalidToken,
-    
-    /// Returned when the user does not have permission.
-    #[error("Permission denied")]
-    PermissionDenied,
-    
-    /// Returned when the token has expired.
-    #[error("Token expired")]
-    TokenExpired,
-    
-    /// Returned for general internal errors.
-    #[error("Internal error")]
-    InternalError,
-    
-    /// Returned when an Argon2 operation fails.
-    #[error("Argon2 error: {0}")]
-    Argon2Error(String),
-}
+/// Result type for authentication operations
+pub type AuthResult<T> = Result<T, AuthError>;
 
-/// JWT claims structure containing user information.
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct Claims {
-    /// User ID
-    pub sub: String,
-    /// Expiration timestamp
-    pub exp: usize,
-    /// User roles
-    pub roles: Vec<String>,
-}
-
-/// Authentication service for handling JWT tokens and password operations.
+/// Authentication service
+#[derive(Clone)]
 pub struct AuthService {
-    encoding_key: EncodingKey,
-    decoding_key: DecodingKey,
-    algorithm: Algorithm,
-    token_expiration: Duration,
+    jwt_secret: String,
+    jwt_expiry: u64,
 }
 
 impl AuthService {
-    /// Creates a new authentication service.
-    ///
-    /// # Arguments
-    /// * `config` - The application settings containing JWT configuration.
-    pub fn new(config: &Settings) -> Self {
+    /// Create a new authentication service
+    pub fn new(jwt_secret: String, jwt_expiry: u64) -> Self {
         Self {
-            encoding_key: EncodingKey::from_secret(config.auth.jwt_secret.as_ref()),
-            decoding_key: DecodingKey::from_secret(config.auth.jwt_secret.as_ref()),
-            algorithm: Algorithm::HS256,
-            token_expiration: Duration::hours(config.auth.jwt_expiration as i64),
+            jwt_secret,
+            jwt_expiry,
         }
     }
-
-    /// Generates a JWT token for a user.
-    ///
-    /// # Arguments
-    /// * `user_id` - The unique identifier for the user.
-    /// * `roles` - The roles associated with the user.
-    ///
-    /// # Returns
-    /// A Result with the JWT token string or an AuthError.
-    pub fn generate_token(&self, user_id: &str, roles: Vec<String>) -> Result<String, AuthError> {
-        let expiration = Utc::now()
-            .checked_add_signed(self.token_expiration)
-            .ok_or(AuthError::InternalError)?
-            .timestamp() as usize;
-
-        let claims = Claims {
-            sub: user_id.to_string(),
-            exp: expiration,
-            roles,
-        };
-
-        encode(&Header::new(self.algorithm), &claims, &self.encoding_key)
-            .map_err(|_| AuthError::InternalError)
+    
+    /// Validate a JWT token
+    pub async fn validate_token(&self, token: &str) -> AuthResult<bool> {
+        // Delegate to JWT module
+        jwt::validate_token(token, &self.jwt_secret).await
     }
-
-    /// Validates a JWT token.
-    ///
-    /// # Arguments
-    /// * `token` - The JWT token to validate.ord => Ok(false),
-    ///
-    /// # Returns
-    /// A Result with the Claims if valid or an AuthError.
-    pub fn validate_token(&self, token: &str) -> Result<Claims, AuthError> {
-        let token_data = decode::<Claims>(
-            token,
-            &self.decoding_key,
-            &Validation::new(self.algorithm),
-        )
-        .map_err(|e| match e.kind() {
-            jsonwebtoken::errors::ErrorKind::ExpiredSignature => AuthError::TokenExpired,
-            _ => AuthError::InvalidToken,
-        })?;
-
-        Ok(token_data.claims)
+    
+    /// Generate a JWT token
+    pub async fn generate_token(&self, user_id: &str, role: &str) -> AuthResult<String> {
+        // Delegate to JWT module
+        jwt::generate_token(user_id, role, &self.jwt_secret, self.jwt_expiry).await
     }
-
-    /// Hashes a password using Argon2.
-    ///
-    /// # Arguments
-    /// * `password` - The plaintext password to hash.
-    ///
-    /// # Returns
-    /// A Result with the hashed password or an AuthError.
-    pub fn hash_password(password: &str) -> Result<String, AuthError> {
-        // Placeholder implementation until argon2 dependency is properly configured
-        // let salt = SaltString::generate(&mut OsRng);
-        // let argon2 = Argon2::default();
-        // 
-        // argon2
-        //     .hash_password(password.as_bytes(), &salt)
-        //     .map(|hash| hash.to_string())
-        //     .map_err(|e| AuthError::Argon2Error(e.to_string()))
+    
+    /// Check if a user has a specific permission
+    pub async fn check_permission(&self, token: &str, permission: &str) -> AuthResult<bool> {
+        // First validate token
+        let claims = jwt::decode_token(token, &self.jwt_secret).await?;
         
-        // Simple placeholder hash for development
-        Ok(format!("hashed_{}", password))
-    }
-
-    /// Verifies a password against a hash.
-    ///
-    /// # Arguments
-    /// * `password` - The plaintext password to verify.
-    /// * `hash` - The hashed password to verify against.
-    ///
-    /// # Returns
-    /// A Result with a boolean indicating if the password is correct or an AuthError.
-    pub fn verify_password(password: &str, hash: &str) -> Result<bool, AuthError> {
-        // Placeholder implementation until argon2 dependency is properly configured
-        // let password_hash = PasswordHash::new(hash)
-        //     .map_err(|e| AuthError::Argon2Error(e.to_string()))?;
-        // 
-        // Ok(Argon2::default()
-        //     .verify_password(password.as_bytes(), &password_hash)
-        //     .is_ok())
-        
-        // Simple placeholder verification for development
-        Ok(hash == format!("hashed_{}", password))
-    }
-}
-
-/// Trait for checking user permissions.
-#[async_trait]
-pub trait PermissionChecker: Send + Sync {
-    /// Checks if a user has a specific permission.
-    ///
-    /// # Arguments
-    /// * `user_id` - The user's unique identifier.
-    /// * `permission` - The permission to check for.
-    ///
-    /// # Returns
-    /// A Result with a boolean indicating if the user has the permission or an AuthError.
-    async fn check_permission(&self, user_id: &str, permission: &str) -> Result<bool, AuthError>;
-}
-
-/// A simple implementation of the PermissionChecker trait.
-pub struct SimplePermissionChecker;
-
-#[async_trait]
-impl PermissionChecker for SimplePermissionChecker {
-    /// Checks if a user has a specific permission.
-    /// 
-    /// This is a placeholder implementation that always returns true.
-    async fn check_permission(&self, _user_id: &str, _permission: &str) -> Result<bool, AuthError> {
-        // This is a placeholder. In a real application, you'd check against a database
-        // or other permission store
-        Ok(true)
+        // Then check permission
+        permissions::check_permission(&claims.role, permission)
     }
 }

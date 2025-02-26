@@ -27,7 +27,6 @@ nexa-gateway/
 ├── core/          # Core functionality and abstractions
 └── config/        # Configuration files
 
-
 ### Crate Details
 
 - **gateway**: The main RESTful API server built using Axum. Handles HTTP requests, routes them to appropriate services, and returns responses.

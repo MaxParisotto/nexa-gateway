@@ -81,6 +81,24 @@ pub struct AgoraSettings {
     pub port: u16,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct LlmProviderSettings {
+    pub provider_name: String,
+    pub api_key: String,
+    pub model: String,
+    pub temperature: f32,
+    pub max_tokens: u32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AgentCommunicationSettings {
+    pub agent_url: String, // Add this field
+    pub agent_token: String,
+    pub protocol: String,
+    pub heartbeat_interval: u32,
+    pub timeout: u32,
+}
+
 impl Settings {
     /// Load configuration from file and environment variables.
     ///
