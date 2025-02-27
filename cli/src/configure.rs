@@ -5,10 +5,11 @@
 use anyhow::Result;
 use console::style;
 use dialoguer::{theme::ColorfulTheme, Input, Select, Confirm, Password};
-use common::config::{LlmProviderSettings, AgentCommunicationSettings}; // Add this import
-use gateway::config::{self, NetworkSettings, AuthSettings, LogSettings, OrchestratorSettings}; 
+use common::config::{LlmProviderSettings, AgentCommunicationSettings};
+use core::config::{self, NetworkSettings, AuthSettings, LogSettings, OrchestratorSettings};
 
 /// Run the configuration wizard
+#[allow(dead_code)]
 pub async fn run_configuration() -> Result<()> {
     println!("╔══════════════════════════════════╗");
     println!("║      PLATFORM CONFIGURATION      ║");
@@ -49,6 +50,7 @@ pub async fn run_configuration() -> Result<()> {
 }
 
 /// Configure network settings
+#[allow(dead_code)]
 async fn configure_network() -> Result<()> {
     println!("\n{}", style("Network Configuration").bold());
     
@@ -117,6 +119,7 @@ async fn configure_network() -> Result<()> {
 }
 
 /// Configure authentication settings
+#[allow(dead_code)]
 async fn configure_authentication() -> Result<()> {
     println!("\n{}", style("Authentication Configuration").bold());
     
@@ -163,11 +166,11 @@ async fn configure_authentication() -> Result<()> {
                 let custom_key = Input::with_theme(&ColorfulTheme::default())
                     .with_prompt("Enter API key (leave empty to keep existing)")
                     .allow_empty(true)
-                    .default(current_settings.api_key.unwrap_or_default())
+                    .default(current_settings.api_key.clone().unwrap_or_default())
                     .interact_text()?;
                     
                 if custom_key.is_empty() {
-                    current_settings.api_key.unwrap_or_default()
+                    current_settings.api_key.clone().unwrap_or_default()
                 } else {
                     custom_key
                 }
@@ -227,6 +230,7 @@ async fn configure_authentication() -> Result<()> {
 }
 
 /// Configure orchestrator settings
+#[allow(dead_code)]
 async fn configure_orchestrator() -> Result<()> {
     println!("\n{}", style("Orchestrator Configuration").bold());
     
@@ -259,6 +263,7 @@ async fn configure_orchestrator() -> Result<()> {
 }
 
 /// Configure LLM provider settings
+#[allow(dead_code)]
 async fn configure_llm_providers() -> Result<()> {
     println!("\n{}", style("LLM Provider Configuration").bold());
     
@@ -377,6 +382,7 @@ async fn configure_llm_providers() -> Result<()> {
 }
 
 /// Configure agent communication settings
+#[allow(dead_code)]
 async fn configure_agent_communication() -> Result<()> {
     println!("\n{}", style("Agent Communication Configuration").bold());
     
@@ -399,6 +405,9 @@ async fn configure_agent_communication() -> Result<()> {
     let new_settings = AgentCommunicationSettings {
         agent_url,
         agent_token,
+        protocol: current_settings.protocol.clone(),        // Reuse current protocol
+        heartbeat_interval: current_settings.heartbeat_interval, // Reuse current interval
+        timeout: current_settings.timeout,                  // Reuse current timeout
     };
     
     // Save new settings
@@ -409,6 +418,7 @@ async fn configure_agent_communication() -> Result<()> {
 }
 
 /// Configure logging settings
+#[allow(dead_code)]
 async fn configure_logging() -> Result<()> {
     println!("\n{}", style("Logging Configuration").bold());
     
@@ -508,7 +518,7 @@ async fn configure_users() -> Result<()> {
         },
         1 => {
             // Add user
-            let username = Input::with_theme(&ColorfulTheme::default())
+            let username: String = Input::with_theme(&ColorfulTheme::default())
                 .with_prompt("Username")
                 .interact_text()?;
                 

@@ -104,16 +104,36 @@ pub async fn update_orchestrator_settings(_settings: &OrchestratorSettings) -> R
 }
 
 pub async fn get_llm_provider_settings() -> Result<common::config::LlmProviderSettings> {
-    Ok(common::config::LlmProviderSettings {
+    // Base settings
+    let mut settings = common::config::LlmProviderSettings {
         provider_name: "LM Studio".to_string(),
         api_key: "".to_string(),
         model: "local".to_string(),
         temperature: 0.7,
         max_tokens: 2048,
         url: "http://localhost:1234".to_string(),
-        available_models: vec!["local".to_string(), "llama2".to_string(), "mistral".to_string()],
+        available_models: vec!["local".to_string()],
         default_model: "local".to_string(),
-    })
+    };
+    
+    // Try to fetch available models from the LLM provider
+    match crate::llm::fetch_available_models(&settings.url).await {
+        Ok(models) if !models.is_empty() => {
+            // Update with real models from the provider
+            settings.available_models = models;
+            
+            // If the current model isn't in the available models, select the first one
+            if !settings.available_models.contains(&settings.model) {
+                settings.model = settings.available_models[0].clone();
+            }
+        },
+        _ => {
+            // If fetch fails, keep the default models
+            settings.available_models = vec!["local".to_string(), "llama2".to_string(), "mistral".to_string()];
+        }
+    }
+    
+    Ok(settings)
 }
 
 pub async fn update_llm_provider_settings(_settings: &common::config::LlmProviderSettings) -> Result<()> {

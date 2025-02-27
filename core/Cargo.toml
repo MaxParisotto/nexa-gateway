@@ -33,6 +33,10 @@ reqwest = { workspace = true, features = ["json"] }
 # Database
 sqlx = { workspace = true, features = ["postgres", "runtime-tokio-rustls", "macros"] }
 
+# System monitoring
+sysinfo = "0.33.1"
+lazy_static = "1.4.0"
+
 # Add this dependency
 chrono = { version = "0.4", features = ["serde"] }
 

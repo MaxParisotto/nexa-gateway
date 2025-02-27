@@ -8,11 +8,10 @@ use console::style;
 use std::fs;
 use std::path::PathBuf;
 use dialoguer::{theme::ColorfulTheme, Input, Select};
-use colored::*;
+use colored::Colorize;
 use std::time::{Duration, Instant, SystemTime};
-use chrono::Utc;
 use tokio::time;
-use rand;
+use prettytable::{Table, Row, Cell};
 
 /// Dashboard metrics for Nexa platform
 #[derive(Debug, Clone)]
@@ -21,6 +20,7 @@ pub struct Dashboard {
     pub cpu_usage: f32,
     pub ram_usage: f32,
     pub uptime: u64,
+    pub uptime_formatted: String,
     
     // Agent metrics
     pub active_agents: u32,
@@ -32,146 +32,194 @@ pub struct Dashboard {
     pub requests_per_second: f32,
     pub tokens_per_second: f32,
     
-    // LLM metrics
+    // System status
+    pub is_online: bool,
+    pub all_services_running: bool,
+    pub llm_connected: bool,
     pub llm_provider: String,
-    pub llm_url: String,
     pub llm_model: String,
     
-    // Internal state
-    update_time: SystemTime,
+    // Dashboard tracking
+    pub update_time: SystemTime,
+    pub last_update: LastUpdateTime,
 }
 
-impl Default for Dashboard {
-    fn default() -> Self {
-        Self {
-            cpu_usage: 0.0,
-            ram_usage: 0.0,
-            uptime: 0,
-            active_agents: 0,
-            tasks_pending: 0,
-            tasks_completed: 0,
-            active_connections: 0,
-            requests_per_second: 0.0,
-            tokens_per_second: 0.0,
-            llm_provider: String::new(),
-            llm_url: String::new(),
-            llm_model: String::new(),
-            update_time: SystemTime::now(),
-        }
-    }
+/// Time fields for display formatting
+#[derive(Debug, Clone)]
+pub struct LastUpdateTime {
+    pub hour: u8,
+    pub minute: u8,
+    pub second: u8,
 }
 
 impl Dashboard {
-    /// Create a new dashboard
+    /// Create a new dashboard instance
     pub fn new() -> Self {
-        Self::default()
+        Dashboard {
+            cpu_usage: 0.0,
+            ram_usage: 0.0,
+            uptime: 0,
+            uptime_formatted: "00:00:00".to_string(),
+            
+            active_agents: 0,
+            tasks_pending: 0,
+            tasks_completed: 0,
+            
+            active_connections: 0,
+            requests_per_second: 0.0,
+            tokens_per_second: 0.0,
+            
+            is_online: true,
+            all_services_running: true,
+            llm_connected: true,
+            llm_provider: "None".to_string(),
+            llm_model: "None".to_string(),
+            
+            update_time: SystemTime::now(),
+            last_update: LastUpdateTime {
+                hour: 0,
+                minute: 0,
+                second: 0,
+            },
+        }
     }
-
-    /// Update metrics from system
+    
+    /// Update dashboard with latest metrics
     pub async fn update(&mut self) -> Result<()> {
-        // Fetch metrics from various services
-        // For now, we'll just simulate random values
-        self.cpu_usage = rand::random::<f32>() * 100.0 % 50.0;
-        self.ram_usage = rand::random::<f32>() * 2048.0;
-        self.uptime = Utc::now().timestamp() as u64 % 86400; // Random time within 24 hours
-
-        // Update active connections and requests per second
-        self.active_connections = rand::random::<u32>() % 100;
-        self.requests_per_second = rand::random::<f32>() * 200.0;
+        // Update time
+        self.update_time = SystemTime::now();
         
-        // Simulate tokens per second for now (in reality would come from LLM metrics)
-        self.tokens_per_second = 1000.0 + rand::random::<f32>() * 4000.0;
-        
-        // Simulate agent metrics
-        let active_agents = rand::random::<u32>() % 5;
-        let pending_tasks = rand::random::<u32>() % 10;
-        let completed_tasks = 100 + rand::random::<u32>() % 200;
-        
-        self.active_agents = active_agents;
-        self.tasks_pending = pending_tasks;
-        self.tasks_completed = completed_tasks;
-        
-        // Fetch LLM settings if available
-        if let Ok(llm_settings) = core::config::get_llm_provider_settings().await {
-            self.llm_provider = llm_settings.provider_name;
-            self.llm_url = llm_settings.url;
-            self.llm_model = llm_settings.model;
+        // Update time display fields
+        if let Ok(duration) = self.update_time.duration_since(std::time::UNIX_EPOCH) {
+            let secs = duration.as_secs();
+            self.last_update = LastUpdateTime {
+                hour: ((secs / 3600) % 24) as u8,
+                minute: ((secs / 60) % 60) as u8,
+                second: (secs % 60) as u8,
+            };
         }
         
-        self.update_time = SystemTime::now();
-
+        // Get system metrics
+        if let Ok(metrics) = core::status::get_system_metrics() {
+            self.cpu_usage = metrics.cpu_usage;
+            self.ram_usage = metrics.memory_usage_gb;
+            self.uptime = metrics.uptime;
+            
+            // Format uptime
+            let uptime_seconds = self.uptime % 60;
+            let uptime_minutes = (self.uptime / 60) % 60;
+            let uptime_hours = self.uptime / 3600;
+            self.uptime_formatted = format!("{:02}h:{:02}m:{:02}s", uptime_hours, uptime_minutes, uptime_seconds);
+            
+            self.active_connections = metrics.active_connections;
+            self.requests_per_second = metrics.requests_per_second;
+            self.tokens_per_second = metrics.tokens_per_second;
+        }
+        
+        // Get agent metrics
+        if let Ok(agents) = core::status::get_agent_metrics() {
+            self.active_agents = agents.iter()
+                .filter(|a| a.status == "Running")
+                .count() as u32;
+                
+            // Simulate some task metrics
+            self.tasks_pending = 2;
+            self.tasks_completed = 17;
+        }
+        
+        // Get LLM provider info
+        if let Ok(llm_settings) = core::config::get_llm_provider_settings().await {
+            self.llm_connected = true;
+            self.llm_provider = llm_settings.provider_name;
+            self.llm_model = llm_settings.model;
+        } else {
+            self.llm_connected = false;
+        }
+        
         Ok(())
     }
-
-    /// Display the dashboard
+    
+    /// Display dashboard with metrics
     pub fn display(&self) {
-        // Format uptime
-        let uptime_seconds = self.uptime % 60;
-        let uptime_minutes = (self.uptime / 60) % 60;
-        let uptime_hours = self.uptime / 3600;
+        let mut table = Table::new();
         
-        // Dashboard layout - top border
-        println!("┌──────────────────────────────────────────────────────────────────────────────┐");
+        // Create header row
+        let header_row = Row::new(vec![
+            Cell::new("  System Metrics  ").style_spec("bFg"),
+            Cell::new("  Last updated:   ").style_spec("bFg"),
+            Cell::new(&format!("{}:{}:{}", self.last_update.hour, self.last_update.minute, self.last_update.second)).style_spec("bFg")
+        ]);
+        table.add_row(header_row);
         
-        // Header
-        println!("│ {} │ {} │", 
-            " System Metrics ".on_blue().white().bold(),
-            format!(" Last updated: {:02}:{:02}:{:02} ", uptime_hours, uptime_minutes, uptime_seconds).on_black().white()
-        );
+        // Resource usage and agent statistics
+        table.add_row(Row::new(vec![
+            Cell::new("  Resource Usage           ").style_spec("bFg"),
+            Cell::new("  Agent Statistics                                  ").style_spec("bFg")
+        ]));
         
-        // Separator
-        println!("├─────────────────────────────┬────────────────────────────────────────────────┤");
+        table.add_row(Row::new(vec![
+            Cell::new(&format!(" CPU: {:.1}%                ", self.cpu_usage)),
+            Cell::new(&format!(" Agents Active: {}                                     ", self.active_agents))
+        ]));
         
-        // Resource metrics + Agent statistics
-        println!("│ {:<25} │ {:<50} │", 
-            " Resource Usage ".green().bold(),
-            " Agent Statistics ".green().bold()
-        );
+        table.add_row(Row::new(vec![
+            Cell::new(&format!(" RAM: {:.1} MB              ", self.ram_usage)),
+            Cell::new(&format!(" Tasks Pending: {}                                     ", self.tasks_pending))
+        ]));
         
-        println!("│ CPU: {:<20} │ Agents Active: {:<37} │", 
-            format!("{:.1}%", self.cpu_usage).yellow(),
-            self.active_agents
-        );
+        table.add_row(Row::new(vec![
+            Cell::new(&format!(" Uptime: {}          ", self.uptime_formatted)),
+            Cell::new(&format!(" Tasks Completed: {}                                  ", self.tasks_completed))
+        ]));
         
-        println!("│ RAM: {:<20} │ Tasks Pending: {:<37} │", 
-            format!("{:.1} MB", self.ram_usage).yellow(),
-            self.tasks_pending
-        );
+        // Network and system status
+        table.add_row(Row::new(vec![
+            Cell::new("  Network & Performance    ").style_spec("bFg"),
+            Cell::new("  System Status                                     ").style_spec("bFg")
+        ]));
         
-        println!("│ Uptime: {:<18} │ Tasks Completed: {:<35} │", 
-            format!("{:02}:{:02}:{:02}", uptime_hours, uptime_minutes, uptime_seconds).yellow(),
-            self.tasks_completed
-        );
+        // Online status
+        let online_status = if self.is_online { 
+            "ONLINE".green().to_string()
+        } else { 
+            "OFFLINE".red().to_string() 
+        };
         
-        // Separator
-        println!("├─────────────────────────────┼────────────────────────────────────────────────┤");
+        table.add_row(Row::new(vec![
+            Cell::new(&format!(" Active Connections: {}       ", self.active_connections)),
+            Cell::new(&format!(" Status: {}                                   ", online_status))
+        ]));
         
-        // Performance metrics
-        println!("│ {:<25} │ {:<50} │", 
-            " Network & Performance ".green().bold(),
-            " System Status ".green().bold()
-        );
+        // Service health
+        let health_status = if self.all_services_running { 
+            "✓ All Services Running".green().to_string()
+        } else { 
+            "✗ Services Degraded".red().to_string() 
+        };
         
-        println!("│ Active Connections: {:<8} │ Status: {:<40} │", 
-            self.active_connections,
-            "ONLINE".green().bold()
-        );
+        table.add_row(Row::new(vec![
+            Cell::new(&format!(" Requests/sec: {:.2}          ", self.requests_per_second)),
+            Cell::new(&format!(" Service Health: {}             ", health_status))
+        ]));
         
-        println!("│ Requests/sec: {:<13} │ Service Health: {:<34} │", 
-            format!("{:.2}", self.requests_per_second).yellow(),
-            "✓ All Services Running".green()
-        );
+        // LLM status
+        let llm_status = if self.llm_connected { 
+            format!("✓ {} @ {}", self.llm_provider.green(), self.llm_model)
+        } else { 
+            "✗ Not Connected".red().to_string() 
+        };
         
-        println!("│ Tokens/sec: {:<14} │ LLM: {:<41} │", 
-            format!("{:.2}", self.tokens_per_second).yellow(),
-            format!("✓ {} @ {}", self.llm_provider, self.llm_model).green()
-        );
+        table.add_row(Row::new(vec![
+            Cell::new(&format!(" Tokens/sec: {:.2}          ", self.tokens_per_second)),
+            Cell::new(&format!(" LLM: {}            ", llm_status))
+        ]));
         
-        // Bottom border
-        println!("└──────────────────────────────────────────────────────────────────────────────┘");
+        // Print the table
+        table.printstd();
     }
-
+    
     /// Start a background task to continuously update metrics
+    #[allow(dead_code)]
     pub fn start_background_updater(self) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             let mut dashboard = self;
@@ -217,10 +265,11 @@ pub async fn display_metrics_for_duration(duration_secs: u64) -> Result<()> {
 }
 
 /// Initialize dashboard for CLI main menu
+#[allow(dead_code)]
 pub async fn init_dashboard() -> Result<Dashboard> {
     let mut dashboard = Dashboard::new();
     dashboard.update().await?;
-    Ok(dashboard)  // Fixed: Wrap the return value in Ok()
+    Ok(dashboard)
 }
 
 /// Manage dashboard configurations

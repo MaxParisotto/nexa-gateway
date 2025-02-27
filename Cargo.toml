@@ -6,7 +6,7 @@ members = [
     "vectordb",
     "auth",
     "common"
-]
+, "sysinfo-test"]
 
 # Set the default member to run with cargo run
 default-members = ["cli"]

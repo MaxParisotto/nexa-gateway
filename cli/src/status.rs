@@ -90,3 +90,85 @@ pub async fn display_llm_settings() -> Result<()> {
     
     Ok(())
 }
+
+/// Select an LLM model from available models
+pub async fn select_llm_model() -> Result<()> {
+    println!("{}", "LLM Model Selection".bold().blue().underline());
+    
+    // Get current LLM settings
+    let mut llm_settings = core::config::get_llm_provider_settings().await?;
+    
+    // Display current settings
+    println!("\nCurrent LLM Provider: {}", llm_settings.provider_name.green());
+    println!("Current Model: {}", llm_settings.model.green());
+    println!("Provider URL: {}", llm_settings.url);
+    
+    println!("\n{}", "Fetching available models...".yellow());
+    
+    // Fetch models from LLM provider
+    let mut available_models = match core::llm::fetch_available_models(&llm_settings.url).await {
+        Ok(models) => models,
+        Err(e) => {
+            println!("{}", format!("Error fetching models: {}", e).red());
+            // Fall back to models from settings - clone to avoid partial move
+            llm_settings.available_models.clone()
+        }
+    };
+    
+    // Safety check: If still empty, add at least one default model to prevent dialogue panic
+    if available_models.is_empty() {
+        println!("{}", "No models available. Adding default model.".yellow());
+        available_models.push("local".to_string());
+    }
+    
+    // Create items for selection with indicators for current and default
+    let selection_items: Vec<String> = available_models.iter().map(|model| {
+        if model == &llm_settings.model && model == &llm_settings.default_model {
+            format!("{} (current, default)", model)
+        } else if model == &llm_settings.model {
+            format!("{} (current)", model)
+        } else if model == &llm_settings.default_model {
+            format!("{} (default)", model)
+        } else {
+            model.clone()
+        }
+    }).collect();
+    
+    // Find the current model's position, defaulting to 0 if not found
+    let default_position = available_models.iter()
+        .position(|m| m == &llm_settings.model)
+        .unwrap_or(0);
+    
+    // Allow user to select a model
+    let selection = dialoguer::Select::with_theme(&dialoguer::theme::ColorfulTheme::default())
+        .with_prompt("Select a model to use")
+        .items(&selection_items)
+        .default(default_position)
+        .interact()?;
+    
+    let selected_model = &available_models[selection];
+    
+    // Confirm if not already selected
+    if selected_model != &llm_settings.model {
+        let confirm = dialoguer::Confirm::with_theme(&dialoguer::theme::ColorfulTheme::default())
+            .with_prompt(format!("Switch to model '{}'?", selected_model))
+            .default(true)
+            .interact()?;
+            
+        if confirm {
+            // Update settings with the new model
+            llm_settings.model = selected_model.clone();
+            if let Err(e) = core::config::update_llm_provider_settings(&llm_settings).await {
+                println!("{}", format!("Error updating model: {}", e).red());
+                return Ok(());
+            }
+            println!("{}", format!("Successfully switched to model '{}'", selected_model).green());
+        } else {
+            println!("Model change cancelled.");
+        }
+    } else {
+        println!("{}", format!("Already using model '{}'", selected_model).blue());
+    }
+    
+    Ok(())
+}

@@ -7,9 +7,12 @@ use clap::{Parser, Subcommand};
 use colored::*;
 use console::Term;
 use std::path::PathBuf;
+use core::status as core_status;
+use core::config;
 
 mod dashboard; // Make sure to include the dashboard module
-mod status;
+mod configure;
+mod status; // Our local status module
 
 // Make sure the source directory exists
 #[tokio::main]
@@ -110,15 +113,16 @@ async fn display_status() -> Result<()> {
     println!("─────────────────────────────────");
     
     // Show system metrics
-    let metrics = core::status::get_system_metrics().await?;
+    let metrics = core_status::get_system_metrics()?;
     println!("CPU Usage: {}%", metrics.cpu_usage);
-    println!("Memory Usage: {} MB", metrics.memory_usage);
-    println!("Uptime: {} seconds", metrics.uptime);
+    println!("Memory Usage: {} GB", metrics.memory_usage_gb);
+    println!("Uptime: {}", metrics.uptime);
     println!("Active Connections: {}", metrics.active_connections);
-    println!("Requests/sec: {:.2}", metrics.requests_per_second);
+    println!("Requests per Second: {:.2}", metrics.requests_per_second);
+    println!("Tokens per Second: {:.2}", metrics.tokens_per_second);
     
     // Add LLM settings display
-    let llm_settings = core::config::get_llm_provider_settings().await?;
+    let llm_settings = config::get_llm_provider_settings().await?;
     println!("\n{}", "LLM Configuration".bold().blue());
     println!("─────────────────────────────────");
     println!("Provider: {}", llm_settings.provider_name);
@@ -192,70 +196,97 @@ async fn list_dashboards() -> Result<()> {
     Ok(())
 }
 
-/// Show the interactive CLI menu with real-time metrics
+/// Show the interactive CLI menu
 async fn show_interactive_menu() -> Result<()> {
     let term = Term::stdout();
     
-    // Initialize the dashboard
-    let dashboard = dashboard::init_dashboard().await?;
-    
-    // Create a clone for display
-    let dashboard_display = dashboard.clone();
-    
-    // Start a background task to update metrics
-    let _metrics_handle = dashboard.start_background_updater();
-    
-    // Helper function to display dashboard
-    let display_dashboard = || {
-        term.clear_screen().unwrap_or_default();
+    // Main menu options without numerical prefixes
+    let selections = vec![
+        "System Status",
+        "Manage AI Agents (not implemented)",
+        "Agent Orchestration (not implemented)",
+        "View Execution Logs (not implemented)",
+        "Configure Platform",
+        "Select LLM Model",
+        "Dashboard Management",
+        "Backup/Restore (not implemented)",
+        "Exit"
+    ];
+
+    loop {
+        term.clear_screen()?;
         
         // Display title
         println!("╔══════════════════════════════════╗");
         println!("║      NEXA AI ORCHESTRATION       ║");
         println!("╚══════════════════════════════════╝");
         
-        // Display real-time metrics dashboard
-        dashboard_display.display();
+        // Create a dashboard and display initial metrics
+        let mut dashboard = dashboard::Dashboard::new();
+        dashboard.update().await?;
+        dashboard.display();
         
-        println!(); // Add some space between dashboard and menu
-    };
-    
-    // Display initial dashboard
-    display_dashboard();
-    
-    // Display menu options
-    let selections = &[
-        "System Status",
-        "Manage AI Agents",
-        "Agent Orchestration",
-        "View Execution Logs",
-        "Configure Platform",
-        "Dashboard Management",
-        "Backup/Restore",
-        "Exit",
-    ];
-    
-    loop {
+        println!("\nSelect an option:");
+        
+        // Use Select widget for arrow key navigation
         let selection = dialoguer::Select::with_theme(&dialoguer::theme::ColorfulTheme::default())
-            .items(selections)
+            .with_prompt("Menu Options")
+            .items(&selections)
             .default(0)
-            .interact_on(&term)?;
+            .interact_on(&Term::stderr())?;
         
+        // Handle selection based on index
         match selection {
             0 => {
                 display_status().await?;
                 wait_for_key_press()?;
-                display_dashboard();
             },
-            7 => {
+            4 => {
+                // Call the previously unused configuration functions
+                configure::run_configuration().await?;
+                wait_for_key_press()?;
+            },
+            5 => {
+                status::select_llm_model().await?;
+                wait_for_key_press()?;
+            },
+            6 => {
+                // Show dashboard management options
+                let dashboard_options = vec![
+                    "Show Real-time Dashboard",
+                    "List Saved Dashboards",
+                    "Back to Main Menu"
+                ];
+                
+                println!("\nDashboard Management:");
+                
+                // Use Select widget for dashboard options
+                let dashboard_choice = dialoguer::Select::with_theme(&dialoguer::theme::ColorfulTheme::default())
+                    .with_prompt("Select option")
+                    .items(&dashboard_options)
+                    .default(0)
+                    .interact_on(&Term::stderr())?;
+                
+                match dashboard_choice {
+                    0 => {
+                        // Display metrics for 30 seconds
+                        dashboard::display_metrics_for_duration(30).await?;
+                    },
+                    1 => {
+                        list_dashboards().await?;
+                        wait_for_key_press()?;
+                    },
+                    _ => { /* Back to main menu */ }
+                }
+            },
+            8 => {
                 println!("Exiting Nexa Gateway...");
                 break;
             },
             _ => {
-                println!("Feature not yet implemented.");
+                println!("Feature not yet implemented or invalid option.");
                 wait_for_key_press()?;
-                display_dashboard();
-            },
+            }
         }
     }
     

@@ -4,17 +4,26 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use tracing::{info, warn, error};
 
-/// Model information from LM Studio
+/// Model information from OpenAI / LM Studio API
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelInfo {
     pub id: String,
+    #[serde(default)]
+    pub object: String,
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
+    pub owned_by: String,
+    #[serde(default)]
+    pub permission: Vec<serde_json::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub description: Option<String>,
 }
 
-/// Response from LM Studio models API
+/// Response from OpenAI / LM Studio models API
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelsResponse {
+    pub object: String,
     pub data: Vec<ModelInfo>,
 }
 
@@ -44,6 +53,7 @@ pub async fn fetch_available_models(url: &str) -> Result<Vec<String>> {
     
     match response.status() {
         StatusCode::OK => {
+            // Try to parse as ModelsResponse (OpenAI format)
             match response.json::<ModelsResponse>().await {
                 Ok(models_response) => {
                     let model_names: Vec<String> = models_response.data
@@ -61,21 +71,43 @@ pub async fn fetch_available_models(url: &str) -> Result<Vec<String>> {
                     Ok(model_names)
                 },
                 Err(e) => {
-                    // If parsing fails, return a default model
-                    warn!("Failed to parse models response: {}", e);
+                    // Try to parse as a raw JSON value for debugging
+                    warn!("Failed to parse models response as OpenAI format: {}", e);
+                    
+                    // Get raw response text for debugging
+                    let response_text = match client.get(&models_url).send().await {
+                        Ok(res) => match res.text().await {
+                            Ok(text) => format!("Response body: {}", text),
+                            Err(_) => "Could not read response text".to_string()
+                        },
+                        Err(_) => "Could not get response".to_string()
+                    };
+                    
+                    info!("Raw API response: {}", response_text);
+                    
+                    // Return default model
                     Ok(vec!["local".to_string()])
                 }
             }
         },
         StatusCode::NOT_FOUND => {
-            warn!("Models endpoint not found, falling back to OpenAI-compatible model format");
-            // If endpoint doesn't exist, return a default model (common with LM Studio)
+            warn!("Models endpoint not found at {}. LM Studio may not have loaded any models yet.", models_url);
+            // If endpoint doesn't exist, return a default model
             Ok(vec!["local".to_string()])
         },
         status => {
             error!("Failed to fetch models: HTTP {}", status);
-            // Return a default model on error
-            Ok(vec!["local".to_string()])
+            // Try another approach - sometimes LM Studio uses a model route
+            match client.get(&format!("{}/model", base_url)).send().await {
+                Ok(alt_response) if alt_response.status().is_success() => {
+                    info!("Found model endpoint instead of models endpoint");
+                    Ok(vec!["local".to_string()])
+                },
+                _ => {
+                    // Return a default model on error
+                    Ok(vec!["local".to_string()])
+                }
+            }
         }
     }
 }
