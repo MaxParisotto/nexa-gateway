@@ -13,6 +13,8 @@ thiserror = { workspace = true }
 common = { path = "../common" }
 futures = "0.3.31"
 anyhow.workspace = true
+uuid = { workspace = true }
+rand = { workspace = true }
 
 [lib]
 name = "agora"

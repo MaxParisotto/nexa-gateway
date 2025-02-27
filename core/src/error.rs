@@ -4,23 +4,30 @@ use axum::{
     Json,
 };
 use serde_json::json;
-use thiserror::Error;
+use std::fmt;
+use std::error::Error as StdError;
 
-#[derive(Error, Debug)]
+#[derive(Debug)]
 #[allow(dead_code)]
 pub enum AppError {
-    #[error("Authentication error: {0}")]
     AuthenticationError(String),
-    
-    #[error("Not found: {0}")]
     NotFound(String),
-    
-    #[error("Internal server error: {0}")]
     InternalServerError(String),
-    
-    #[error("Bad request: {0}")]
     BadRequest(String),
 }
+
+impl fmt::Display for AppError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AppError::AuthenticationError(msg) => write!(f, "Authentication error: {}", msg),
+            AppError::NotFound(msg) => write!(f, "Not found: {}", msg),
+            AppError::InternalServerError(msg) => write!(f, "Internal server error: {}", msg),
+            AppError::BadRequest(msg) => write!(f, "Bad request: {}", msg),
+        }
+    }
+}
+
+impl StdError for AppError {}
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
@@ -38,3 +45,4 @@ impl IntoResponse for AppError {
         (status, body).into_response()
     }
 }
+

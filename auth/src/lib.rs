@@ -6,46 +6,34 @@ pub mod jwt;
 pub mod permissions;
 pub mod middleware;
 pub mod error;
+pub mod service;
 
 pub use error::AuthError;
+pub use service::AuthService;
 
 /// Result type for authentication operations
 pub type AuthResult<T> = Result<T, AuthError>;
 
-/// Authentication service
-#[derive(Clone)]
-pub struct AuthService {
-    jwt_secret: String,
-    jwt_expiry: u64,
-}
-
-impl AuthService {
-    /// Create a new authentication service
-    pub fn new(jwt_secret: String, jwt_expiry: u64) -> Self {
-        Self {
-            jwt_secret,
-            jwt_expiry,
-        }
-    }
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use jwt::{create_jwt, validate_jwt};
+    use uuid::Uuid;
     
-    /// Validate a JWT token
-    pub async fn validate_token(&self, token: &str) -> AuthResult<bool> {
-        // Delegate to JWT module
-        jwt::validate_token(token, &self.jwt_secret).await
-    }
-    
-    /// Generate a JWT token
-    pub async fn generate_token(&self, user_id: &str, role: &str) -> AuthResult<String> {
-        // Delegate to JWT module
-        jwt::generate_token(user_id, role, &self.jwt_secret, self.jwt_expiry).await
-    }
-    
-    /// Check if a user has a specific permission
-    pub async fn check_permission(&self, token: &str, permission: &str) -> AuthResult<bool> {
-        // First validate token
-        let claims = jwt::decode_token(token, &self.jwt_secret).await?;
+    #[test]
+    fn test_jwt() {
+        let user_id = Uuid::new_v4().to_string();
+        let username = "test_user";
         
-        // Then check permission
-        permissions::check_permission(&claims.role, permission)
+        // Create JWT
+        let token = create_jwt(&user_id, username).expect("Failed to create JWT");
+        
+        // Validate JWT
+        let claims = validate_jwt(&token).expect("Failed to validate JWT");
+        
+        // Check claims
+        assert_eq!(claims.sub, user_id);
+        assert_eq!(claims.username, username);
+        assert_eq!(claims.role, "user");
     }
 }

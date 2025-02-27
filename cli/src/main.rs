@@ -117,6 +117,14 @@ async fn display_status() -> Result<()> {
     println!("Active Connections: {}", metrics.active_connections);
     println!("Requests/sec: {:.2}", metrics.requests_per_second);
     
+    // Add LLM settings display
+    let llm_settings = core::config::get_llm_provider_settings().await?;
+    println!("\n{}", "LLM Configuration".bold().blue());
+    println!("─────────────────────────────────");
+    println!("Provider: {}", llm_settings.provider_name);
+    println!("Model: {}", llm_settings.model);
+    println!("URL: {}", llm_settings.url);
+    
     Ok(())
 }
 
@@ -189,13 +197,17 @@ async fn show_interactive_menu() -> Result<()> {
     let term = Term::stdout();
     
     // Initialize the dashboard
-    let mut metrics = dashboard::init_dashboard().await?;
+    let dashboard = dashboard::init_dashboard().await?;
+    
+    // Create a clone for display
+    let dashboard_display = dashboard.clone();
     
     // Start a background task to update metrics
-    let _metrics_handle = metrics.start_background_updater().await;
+    let _metrics_handle = dashboard.start_background_updater();
     
-    loop {
-        term.clear_screen()?;
+    // Helper function to display dashboard
+    let display_dashboard = || {
+        term.clear_screen().unwrap_or_default();
         
         // Display title
         println!("╔══════════════════════════════════╗");
@@ -203,23 +215,27 @@ async fn show_interactive_menu() -> Result<()> {
         println!("╚══════════════════════════════════╝");
         
         // Display real-time metrics dashboard
-        metrics.update().await?;
-        metrics.display();
+        dashboard_display.display();
         
         println!(); // Add some space between dashboard and menu
-        
-        // Display menu options
-        let selections = &[
-            "System Status",
-            "Manage AI Agents",
-            "Agent Orchestration",
-            "View Execution Logs",
-            "Configure Platform",
-            "Dashboard Management",
-            "Backup/Restore",
-            "Exit",
-        ];
-        
+    };
+    
+    // Display initial dashboard
+    display_dashboard();
+    
+    // Display menu options
+    let selections = &[
+        "System Status",
+        "Manage AI Agents",
+        "Agent Orchestration",
+        "View Execution Logs",
+        "Configure Platform",
+        "Dashboard Management",
+        "Backup/Restore",
+        "Exit",
+    ];
+    
+    loop {
         let selection = dialoguer::Select::with_theme(&dialoguer::theme::ColorfulTheme::default())
             .items(selections)
             .default(0)
@@ -229,6 +245,7 @@ async fn show_interactive_menu() -> Result<()> {
             0 => {
                 display_status().await?;
                 wait_for_key_press()?;
+                display_dashboard();
             },
             7 => {
                 println!("Exiting Nexa Gateway...");
@@ -237,6 +254,7 @@ async fn show_interactive_menu() -> Result<()> {
             _ => {
                 println!("Feature not yet implemented.");
                 wait_for_key_press()?;
+                display_dashboard();
             },
         }
     }

@@ -18,3 +18,16 @@ agora:
 
 logging:
   level: "info"
+
+llm:
+  provider_name: "LM Studio"
+  api_key: ""
+  model: "local"
+  temperature: 0.7
+  max_tokens: 2048
+  url: "http://localhost:1234"
+  available_models:
+    - "local"
+    - "llama2"
+    - "mistral"
+  default_model: "local"

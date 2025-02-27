@@ -105,11 +105,14 @@ pub async fn update_orchestrator_settings(_settings: &OrchestratorSettings) -> R
 
 pub async fn get_llm_provider_settings() -> Result<common::config::LlmProviderSettings> {
     Ok(common::config::LlmProviderSettings {
-        provider_name: "OpenAI".to_string(),
-        api_key: "default-api-key".to_string(),
-        model: "gpt-4".to_string(),
+        provider_name: "LM Studio".to_string(),
+        api_key: "".to_string(),
+        model: "local".to_string(),
         temperature: 0.7,
         max_tokens: 2048,
+        url: "http://localhost:1234".to_string(),
+        available_models: vec!["local".to_string(), "llama2".to_string(), "mistral".to_string()],
+        default_model: "local".to_string(),
     })
 }
 

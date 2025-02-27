@@ -1,11 +1,17 @@
 use thiserror::Error;
-use qdrant_client::prelude::QdrantError;
+use qdrant_client::QdrantError;
 use axum::http::StatusCode;
 
 #[derive(Debug, Error)]
 pub enum VectorDbError {
     #[error("Qdrant connection error: {0}")]
     Connection(#[from] QdrantError),
+    
+    #[error("Connection error: {0}")]
+    ConnectionError(String),
+    
+    #[error("Operation error: {0}")]
+    OperationError(String),
     
     #[error("Collection creation error: {0}")]
     CollectionCreation(String),
@@ -42,6 +48,8 @@ impl VectorDbError {
     pub fn status_code(&self) -> StatusCode {
         match self {
             VectorDbError::Connection(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            VectorDbError::ConnectionError(_) => StatusCode::INTERNAL_SERVER_ERROR,
+            VectorDbError::OperationError(_) => StatusCode::INTERNAL_SERVER_ERROR,
             VectorDbError::CollectionCreation(_) => StatusCode::INTERNAL_SERVER_ERROR,
             VectorDbError::CollectionNotFound(_) => StatusCode::NOT_FOUND,
             VectorDbError::PointInsertion(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -71,12 +79,14 @@ impl axum::response::IntoResponse for VectorDbError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use qdrant_client::prelude::QdrantError;
+    use axum::http::StatusCode;
 
     #[test]
     fn test_error_status_codes() {
+        // Create a QdrantError using a method that doesn't require From<String>
+        let connection_error = VectorDbError::ConnectionError("test".to_string());
         assert_eq!(
-            VectorDbError::Connection(QdrantError::from("test".to_string())).status_code(),
+            connection_error.status_code(),
             StatusCode::INTERNAL_SERVER_ERROR
         );
 

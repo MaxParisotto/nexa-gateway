@@ -10,8 +10,8 @@ license = "MIT"
 # Internal crates
 common = { path = "../common" }
 auth = { path = "../auth" }
-vectordb = { path = "../vectordb", optional = true }
-agora = { path = "../agora", optional = true }
+vectordb = { path = "../vectordb" }
+agora = { path = "../agora" }
 
 # Core dependencies from workspace
 tokio.workspace = true
@@ -28,6 +28,7 @@ axum.workspace = true
 hyper = { workspace = true }
 tower = { workspace = true }
 tower-http.workspace = true
+reqwest = { workspace = true, features = ["json"] }
 
 # Database
 sqlx = { workspace = true, features = ["postgres", "runtime-tokio-rustls", "macros"] }
@@ -36,5 +37,12 @@ sqlx = { workspace = true, features = ["postgres", "runtime-tokio-rustls", "macr
 chrono = { version = "0.4", features = ["serde"] }
 
 [dev-dependencies]
-tokio = { version = "1.43.0", features = ["full"] }
-reqwest = "0.12.12"
+tokio = { workspace = true, features = ["full"] }
+reqwest = { workspace = true, features = ["json"] }
+uuid = { workspace = true }
+futures = { workspace = true }
+rand = { workspace = true }
+tokio-tungstenite = { workspace = true }
+# Make testing dependencies not optional
+vectordb = { path = "../vectordb" }
+agora = { path = "../agora" }

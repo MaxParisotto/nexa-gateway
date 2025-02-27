@@ -1,14 +1,13 @@
 use std::collections::HashMap;
-use std::sync::{Arc, RwLock};
+use std::sync::RwLock;
 use tokio::sync::broadcast;
-use uuid::Uuid;
 
 use crate::{AgoraError, Message};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, warn};
 
 const CHANNEL_CAPACITY: usize = 1000;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Topic {
     name: String,
     sender: broadcast::Sender<Message>,

@@ -277,10 +277,96 @@ async fn configure_llm_providers() -> Result<()> {
             else { "********" }))
         .interact()?;
         
+    let url = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt("LLM Endpoint URL")
+        .default(current_settings.url)
+        .interact_text()?;
+        
+    // Test connection and fetch available models
+    println!("Testing connection to LLM provider...");
+    let connection_ok = core::llm::test_connection(&url).await?;
+    
+    // Initialize available models
+    let mut available_models = current_settings.available_models.clone();
+    let mut default_model = current_settings.default_model.clone();
+    
+    if connection_ok {
+        println!("{}", style("✓ Connection successful").green());
+        
+        // Try to fetch models from the provider
+        println!("Fetching available models...");
+        match core::llm::fetch_available_models(&url).await {
+            Ok(models) if !models.is_empty() => {
+                println!("{}", style(format!("✓ Found {} models", models.len())).green());
+                available_models = models;
+                
+                // Suggest a default model
+                let suggested_default = core::llm::get_default_model(&available_models);
+                
+                // Display available models
+                println!("\nAvailable models:");
+                for (i, model) in available_models.iter().enumerate() {
+                    println!("  {}. {}{}", 
+                        i + 1, 
+                        model,
+                        if model == &suggested_default { " (suggested default)" } else { "" }
+                    );
+                }
+                
+                // Let user select default model
+                let model_choices: Vec<&String> = available_models.iter().collect();
+                let default_index = available_models.iter()
+                    .position(|m| m == &suggested_default)
+                    .unwrap_or(0);
+                
+                let selected_index = Select::with_theme(&ColorfulTheme::default())
+                    .with_prompt("Select default model")
+                    .items(&model_choices)
+                    .default(default_index)
+                    .interact()?;
+                
+                default_model = available_models[selected_index].clone();
+            },
+            Ok(_) => {
+                println!("{}", style("No models found. Using default models.").yellow());
+            },
+            Err(e) => {
+                println!("{}", style(format!("Failed to fetch models: {}", e)).red());
+                println!("{}", style("Using default models.").yellow());
+            }
+        }
+    } else {
+        println!("{}", style("✗ Connection failed").red());
+        println!("{}", style("Check URL or network connection").yellow());
+    }
+        
+    let model = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt("Current Model")
+        .default(default_model.clone())
+        .interact_text()?;
+        
+    let temperature = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt("Temperature")
+        .default(current_settings.temperature.to_string())
+        .interact_text()?
+        .parse::<f32>()?;
+        
+    let max_tokens = Input::with_theme(&ColorfulTheme::default())
+        .with_prompt("Max Tokens")
+        .default(current_settings.max_tokens.to_string())
+        .interact_text()?
+        .parse::<u32>()?;
+        
     // Create updated settings
     let new_settings = LlmProviderSettings {
         provider_name,
         api_key,
+        url,
+        model,
+        temperature,
+        max_tokens,
+        available_models,
+        default_model,
     };
     
     // Save new settings

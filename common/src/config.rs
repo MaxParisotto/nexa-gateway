@@ -88,6 +88,9 @@ pub struct LlmProviderSettings {
     pub model: String,
     pub temperature: f32,
     pub max_tokens: u32,
+    pub url: String,
+    pub available_models: Vec<String>,
+    pub default_model: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

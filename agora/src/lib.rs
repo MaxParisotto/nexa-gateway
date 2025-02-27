@@ -1,3 +1,13 @@
+//! Agora crate for real-time WebSocket communication
+//!
+//! This crate provides WebSocket server functionality for real-time
+//! communication, topic subscriptions, and message routing.
+
+pub mod client;
+pub mod topic;
+pub mod server;
+pub mod message;
+
 use common::config::Settings;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -11,7 +21,7 @@ use tracing::{error, info};
 // Type aliases for cleaner code
 // Removed unused type alias: WsStream
 type SubscriptionId = String;
-type SubscriptionManager = Arc<Mutex<HashMap<SubscriptionId, tokio::sync::mpsc::Sender<Message>>>>;
+type SubscriptionManager = Arc<Mutex<HashMap<SubscriptionId, tokio::sync::mpsc::Sender<String>>>>;
 
 #[derive(Debug, Error)]
 pub enum AgoraError {
@@ -32,6 +42,15 @@ pub enum AgoraError {
     
     #[error("IO error: {0}")]
     IoError(#[from] std::io::Error),
+    
+    #[error("Client error: {0}")]
+    ClientError(String),
+    
+    #[error("Message error: {0}")]
+    MessageError(String),
+    
+    #[error("Topic not found: {0}")]
+    TopicNotFound(String),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -81,7 +100,7 @@ impl AgoraServer {
     }
     
     // Method to send a message to a topic
-    pub fn send_message(&self, _message: Message) -> Result<usize, AgoraError> {
+    pub fn send_message(&self, _message: String) -> Result<usize, AgoraError> {
         let _manager = self.subscription_manager.lock().map_err(|_| {
             AgoraError::RoutingError("Failed to acquire lock".to_string())
         })?;
@@ -120,4 +139,68 @@ impl AgoraServer {
     //         self.settings.agora.port
     //     )
     // }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use server::WebSocketServer;
+    use tokio::sync::mpsc;
+    use tokio_tungstenite::connect_async;
+    use futures::{SinkExt, StreamExt};
+    use uuid::Uuid;
+    
+    #[tokio::test]
+    async fn test_websocket_echo() {
+        // Create a channel for the server
+        let (_tx, rx) = mpsc::channel::<String>(100);
+        
+        // Use a random port to avoid conflicts
+        let port = 9000 + rand::random::<u16>() % 1000;
+        let server = WebSocketServer::new(port, rx);
+        
+        // Start the server in a background task
+        tokio::spawn(async move {
+            if let Err(e) = server.run().await {
+                eprintln!("Server error: {:?}", e);
+            }
+        });
+        
+        // Give the server a moment to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+        
+        // Connect a test client
+        let url = format!("ws://localhost:{}/ws", port);
+        let (mut ws_stream, _) = connect_async(url)
+            .await
+            .expect("Failed to connect to WebSocket server");
+        
+        // Create a test message
+        let test_uuid = Uuid::new_v4().to_string();
+        let test_message = serde_json::json!({
+            "type": "test",
+            "payload": {
+                "message": format!("Test message {}", test_uuid)
+            }
+        }).to_string();
+        
+        // Send the message
+        ws_stream.send(tokio_tungstenite::tungstenite::Message::Text(test_message.clone().into()))
+            .await
+            .expect("Failed to send message");
+        
+        // Server should echo back the message
+        let msg = ws_stream.next().await
+            .expect("No response from server")
+            .expect("Failed to receive message");
+        
+        if let tokio_tungstenite::tungstenite::Message::Text(received) = msg {
+            assert_eq!(received, test_message);
+        } else {
+            panic!("Unexpected message type");
+        }
+        
+        // Clean up
+        ws_stream.close(None).await.expect("Failed to close WebSocket connection");
+    }
 }
