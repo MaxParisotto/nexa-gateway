@@ -17,8 +17,8 @@ mod status; // Our local status module
 // Make sure the source directory exists
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing for logging
-    tracing_subscriber::fmt::init();
+    // Initialize enhanced logging with both console and file outputs
+    setup_logging()?;
     tracing::info!("Starting Nexa Gateway CLI");
     
     // Parse command-line arguments
@@ -298,5 +298,70 @@ fn wait_for_key_press() -> Result<()> {
     println!("\nPress any key to continue...");
     let term = Term::stdout();
     term.read_key()?;
+    Ok(())
+}
+
+// Initialize enhanced logging with both console and file outputs
+fn setup_logging() -> Result<()> {
+    use std::fs;
+    use std::path::Path;
+    use tracing_subscriber::{
+        layer::SubscriberExt,
+        util::SubscriberInitExt,
+        EnvFilter,
+        fmt,
+    };
+    use tracing_appender::rolling::{RollingFileAppender, Rotation};
+
+    // Create logs directory if it doesn't exist
+    let logs_dir = Path::new("logs");
+    if !logs_dir.exists() {
+        fs::create_dir_all(logs_dir)?;
+        println!("Created logs directory");
+    }
+
+    // Generate a rolling file appender for logs that rotates daily
+    let file_appender = RollingFileAppender::new(
+        Rotation::DAILY,
+        logs_dir,
+        "nexa-gateway.log"
+    );
+
+    // Create a non-blocking writer for the file appender
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+    
+    // We need to store the guard to prevent it from being dropped
+    // Using a Box leak to keep it alive for the program duration is acceptable
+    // since this runs for the entire CLI lifetime
+    Box::leak(Box::new(_guard));
+
+    // Set default filter level based on environment
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or_else(|_| EnvFilter::new("cli=info,core=info,common=info,tower_http=info,axum=info"));
+
+    // Console layer with colored output for development
+    let console_layer = fmt::layer()
+        .with_target(true)
+        .with_ansi(true);
+
+    // File layer with JSON formatting for easier parsing
+    let file_layer = fmt::layer()
+        .with_target(true)
+        .with_ansi(false) // No ANSI colors in file logs
+        .with_writer(non_blocking)
+        .json();
+
+    // Register both layers
+    tracing_subscriber::registry()
+        .with(env_filter)
+        .with(console_layer)
+        .with(file_layer)
+        .init();
+
+    tracing::info!(
+        version = env!("CARGO_PKG_VERSION"),
+        "Logging system initialized"
+    );
+
     Ok(())
 }

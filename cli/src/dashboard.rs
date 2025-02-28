@@ -1,18 +1,16 @@
-//! Dashboard module for Nexa Gateway CLI
-//!
-//! This module provides functionality to save and load dashboard configurations
+//! Dashboard module for system monitoring
+//! Provides functionality to display real-time metrics
 //! and display real-time system metrics.
 
 use anyhow::Result;
+use colored::Colorize;
 use console::style;
+use dialoguer::{theme::ColorfulTheme, Input, Select};
+use prettytable::{Table, Row, Cell};
 use std::fs;
 use std::path::PathBuf;
-use dialoguer::{theme::ColorfulTheme, Input, Select};
-use colored::Colorize;
 use std::time::{Duration, Instant, SystemTime};
 use tokio::time;
-use prettytable::{Table, Row, Cell};
-
 /// Dashboard metrics for Nexa platform
 #[derive(Debug, Clone)]
 pub struct Dashboard {
@@ -248,20 +246,62 @@ pub async fn display_metrics_once() -> Result<()> {
 pub async fn display_metrics_for_duration(duration_secs: u64) -> Result<()> {
     let start_time = Instant::now();
     let mut dashboard = Dashboard::new();
-    let mut interval = time::interval(Duration::from_secs(1));
+    let mut refresh_count = 0;
     
-    while start_time.elapsed().as_secs() < duration_secs {
+    // Log that we're starting the real-time dashboard
+    tracing::info!("Starting real-time dashboard for {} seconds", duration_secs);
+    
+    loop {
         // Clear console and move cursor to top-left
         print!("\x1B[2J\x1B[1;1H");
         
+        // Update and display dashboard
         dashboard.update().await?;
         dashboard.display();
-        println!("\nPress Ctrl+C to exit...");
         
-        interval.tick().await;
+        // Calculate time remaining
+        let elapsed = start_time.elapsed().as_secs();
+        if elapsed >= duration_secs {
+            println!("\n{}", "Dashboard monitoring complete.".bold().green());
+            println!("Press Enter to return to main menu...");
+            tokio::time::sleep(Duration::from_secs(3)).await;
+            return Ok(());
+        }
+        
+        let time_remaining = duration_secs.saturating_sub(elapsed);
+        refresh_count += 1;
+        
+        // Show menu options at each refresh
+        println!("\n{}", format!("Time remaining: {} seconds", time_remaining).bold());
+        
+        // Show menu every 5 refreshes
+        if refresh_count % 5 == 0 {
+            println!("\n{}", "Dashboard Options".bold().green());
+            
+            // Create a simple selection menu
+            let selection = dialoguer::Select::with_theme(&ColorfulTheme::default())
+                .with_prompt("Choose an option")
+                .items(&[
+                    "Continue watching dashboard",
+                    "Return to main menu"
+                ])
+                .default(0)
+                .interact()?;
+                
+            if selection == 1 {
+                tracing::info!("User chose to return to main menu");
+                return Ok(());
+            }
+            
+            // If continue was selected, proceed with refresh
+            println!("Continuing dashboard monitoring...");
+        } else {
+            // Just show the time remaining and how to access menu
+            println!("Menu will appear in {} more refreshes", 5 - (refresh_count % 5));
+            println!("{}", "Press Ctrl+C at any time to exit dashboard view".italic());
+            tokio::time::sleep(Duration::from_secs(1)).await;
+        }
     }
-    
-    Ok(())
 }
 
 /// Initialize dashboard for CLI main menu
